@@ -38,6 +38,7 @@
 
 #include "gralloc_priv.h"
 #include "overlayUtils.h"
+#include <mdp_version.h>
 
 namespace overlay {
 
