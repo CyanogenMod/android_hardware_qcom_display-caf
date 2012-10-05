@@ -19,6 +19,7 @@
 #include <overlay.h>
 #include "hwc_video.h"
 #include "hwc_utils.h"
+#include <mdp_version.h>
 
 namespace qhwc {
 
@@ -35,7 +36,9 @@ bool VideoOverlay::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
     int yuvIndex =  ctx->listStats[dpy].yuvIndex;
     sIsModeOn[dpy] = false;
 
-    if(!ctx->mMDP.hasOverlay) {
+    if((!ctx->mMDP.hasOverlay) ||
+                            (qdutils::MDPVersion::getInstance().getMDPVersion()
+                             <= qdutils::MDP_V4_0)) {
        ALOGD_IF(VIDEO_DEBUG,"%s, this hw doesnt support overlay", __FUNCTION__);
        return false;
     }
