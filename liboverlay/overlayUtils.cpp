@@ -37,6 +37,9 @@
 #include "mdpWrapper.h"
 #include "mdp_version.h"
 
+#define MDP4_REV40_UP_SCALING_MAX 8
+#define MDP4_REV41_OR_LATER_UP_SCALING_MAX 20
+
 // just a helper static thingy
 namespace {
 struct IOFile {
@@ -291,6 +294,14 @@ int getHALFormat(int mdpFormat) {
     }
     // not reached
     return -1;
+}
+
+int getOverlayMagnificationLimit()
+{
+    if(qdutils::MDPVersion::getInstance().getMDPVersion() > 400)
+       return MDP4_REV41_OR_LATER_UP_SCALING_MAX;
+    else
+       return MDP4_REV40_UP_SCALING_MAX;
 }
 
 bool is3DTV() {
