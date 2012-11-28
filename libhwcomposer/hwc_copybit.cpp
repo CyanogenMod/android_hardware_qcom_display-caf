@@ -31,6 +31,7 @@
 
 namespace qhwc {
 
+
 struct range {
     int current;
     int end;

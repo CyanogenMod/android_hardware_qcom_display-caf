@@ -310,8 +310,10 @@ static int hwc_set_primary(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
         int fd = -1; //FenceFD from the Copybit(valid in async mode)
         if(ctx->mCopyBit[dpy])
             ctx->mCopyBit[dpy]->draw(ctx, list, dpy, &fd);
+
         if(list->numHwLayers > 1)
             hwc_sync(ctx, list, dpy, fd);
+
         if (!VideoOverlay::draw(ctx, list, dpy)) {
             ALOGE("%s: VideoOverlay::draw fail!", __FUNCTION__);
             ret = -1;
