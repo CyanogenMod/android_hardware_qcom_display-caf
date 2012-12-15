@@ -63,6 +63,7 @@ class MDPComp {
     static bool sEnabled;
     static bool sDebugLogs;
     static bool sIdleFallBack;
+    static bool sPreRotation;
     static int sActiveMax;
     static bool sSecuredVid;
 

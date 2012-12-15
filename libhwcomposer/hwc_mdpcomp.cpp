@@ -33,6 +33,7 @@ bool MDPComp::sDebugLogs = false;
 bool MDPComp::sEnabled = false;
 int MDPComp::sActiveMax = 0;
 bool MDPComp::sSecuredVid = false;
+bool MDPComp::sPreRotation = true;
 
 bool MDPComp::deinit() {
     //XXX: Tear down MDP comp state
@@ -199,7 +200,7 @@ int MDPComp::prepare(hwc_context_t *ctx, hwc_layer_1_t *layer,
 
         ovutils::eTransform orient = overlay::utils::OVERLAY_TRANSFORM_0 ;
 
-        if(!(layer->transform & HWC_TRANSFORM_ROT_90)) {
+        if (sPreRotation && !(layer->transform & HWC_TRANSFORM_ROT_90)) {
             if(layer->transform & HWC_TRANSFORM_FLIP_H) {
                 ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_FLIP_H);
             }
@@ -291,9 +292,12 @@ bool MDPComp::isDoable(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
         // 180 transforms. Fail for any transform involving 90 (90, 270).
         hwc_layer_1_t* layer = &list->hwLayers[i];
         private_handle_t *hnd = (private_handle_t *)layer->handle;
-        if((layer->transform & HWC_TRANSFORM_ROT_90)  && !isYuvBuffer(hnd)) {
-            ALOGD_IF(isDebug(), "%s: orientation involved",__FUNCTION__);
-            return false;
+        if((sPreRotation ?
+                (layer->transform & HWC_TRANSFORM_ROT_90) :
+                (layer->transform))
+                && !isYuvBuffer(hnd)) {
+                ALOGD_IF(isDebug(), "%s: orientation involved",__FUNCTION__);
+                return false;
         }
     }
     return true;
@@ -577,6 +581,12 @@ bool MDPComp::init(hwc_context_t *ctx) {
     if(property_get("debug.mdpcomp.idletime", property, NULL) > 0) {
         if(atoi(property) != 0)
            idle_timeout = atoi(property);
+    }
+
+    sPreRotation = true;
+    if(property_get("debug.prerotation.disable", property, NULL) > 0) {
+        if(atoi(property) != 0)
+           sPreRotation = false;
     }
 
     //create Idle Invalidator
