@@ -23,12 +23,14 @@
 #include <hardware/hwcomposer.h>
 #include <gr.h>
 #include <gralloc_priv.h>
+#include <utils/String8.h>
 
 #define ALIGN_TO(x, align)     (((x) + ((align)-1)) & ~((align)-1))
 #define LIKELY( exp )       (__builtin_expect( (exp) != 0, true  ))
 #define UNLIKELY( exp )     (__builtin_expect( (exp) != 0, false ))
 #define FINAL_TRANSFORM_MASK 0x000F
 #define MAX_NUM_DISPLAYS 4 //Yes, this is ambitious
+#define MAX_NUM_LAYERS 32
 
 //Fwrd decls
 struct hwc_context_t;
@@ -57,6 +59,7 @@ struct DisplayAttributes {
     uint32_t vsync_period; //nanos
     uint32_t xres;
     uint32_t yres;
+    uint32_t stride;
     float xdpi;
     float ydpi;
     int fd;
@@ -73,13 +76,41 @@ struct ListStats {
     //Video specific
     int yuvCount;
     int yuvIndex;
+    bool needsAlphaScale;
 };
 
-enum {
-    HWC_MDPCOMP = 0x00000002,
-    HWC_LAYER_RESERVED_0 = 0x00000004,
-    HWC_LAYER_RESERVED_1 = 0x00000008
+
+struct LayerProp {
+    uint32_t mFlags; //qcom specific layer flags
+    LayerProp():mFlags(0) {};
 };
+
+// LayerProp::flag values
+enum {
+    HWC_MDPCOMP = 0x00000001,
+};
+
+class LayerCache {
+    public:
+    LayerCache() {
+        canUseLayerCache = false;
+        numHwLayers = 0;
+        for(uint32_t i = 0; i < MAX_NUM_LAYERS; i++) {
+            hnd[i] = NULL;
+        }
+    }
+    //LayerCache optimization
+    void updateLayerCache(hwc_display_contents_1_t* list);
+    void resetLayerCache(int num);
+    void markCachedLayersAsOverlay(hwc_display_contents_1_t* list);
+    private:
+    uint32_t numHwLayers;
+    bool canUseLayerCache;
+    buffer_handle_t hnd[MAX_NUM_LAYERS];
+
+};
+
+
 
 
 // -----------------------------------------------------------------------------
@@ -92,8 +123,11 @@ void closeContext(hwc_context_t *ctx);
 //Crops source buffer against destination and FB boundaries
 void calculate_crop_rects(hwc_rect_t& crop, hwc_rect_t& dst,
         const int fbWidth, const int fbHeight, int orient);
-
+bool isSecuring(hwc_context_t* ctx);
 bool isExternalActive(hwc_context_t* ctx);
+
+//Helper function to dump logs
+void dumpsys_log(android::String8& buf, const char* fmt, ...);
 
 //Sync point impl.
 int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy);
@@ -175,33 +209,24 @@ struct vsync_state {
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     const hwc_procs_t* proc;
-
-    int overlayInUse[HWC_NUM_DISPLAY_TYPES];
-
     //Framebuffer device
     framebuffer_device_t *mFbDev;
-
     //Overlay object - NULL for non overlay devices
-    overlay::Overlay *mOverlay[HWC_NUM_DISPLAY_TYPES];
-
+    overlay::Overlay *mOverlay;
     //QService object
     qService::QService *mQService;
-
     // External display related information
     qhwc::ExternalDisplay *mExtDisplay;
-
     qhwc::MDPInfo mMDP;
-
     qhwc::DisplayAttributes dpyAttr[HWC_NUM_DISPLAY_TYPES];
-
     qhwc::ListStats listStats[HWC_NUM_DISPLAY_TYPES];
+    qhwc::LayerCache *mLayerCache;
+    qhwc::LayerProp *layerProp[HWC_NUM_DISPLAY_TYPES];
 
     //Securing in progress indicator
     bool mSecuring;
-
     //Display in secure mode indicator
     bool mSecureMode;
-
     //Lock to prevent set from being called while blanking
     mutable Locker mBlankLock;
     //Lock to protect set when detaching external disp
