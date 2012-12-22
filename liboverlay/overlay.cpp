@@ -38,11 +38,16 @@ using namespace utils;
 
 Overlay::Overlay() {
     int numPipes = 0;
+    char property[PROPERTY_VALUE_MAX];
     int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
     if (mdpVersion > qdutils::MDP_V3_1) numPipes = 4;
     if (mdpVersion >= qdutils::MDSS_V5) numPipes = 6;
 
-    PipeBook::NUM_PIPES = numPipes;
+    if (property_get("debug.mdpcomp.maxlayer", property, NULL) > 0) {
+        PipeBook::NUM_PIPES = atoi(property);
+    } else {
+        PipeBook::NUM_PIPES = numPipes;
+    }
     for(int i = 0; i < PipeBook::NUM_PIPES; i++) {
         mPipeBook[i].init();
     }
