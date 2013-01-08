@@ -98,10 +98,7 @@ void MdssRot::setDownscale(int ds) {
 }
 
 void MdssRot::setFlags(const utils::eMdpFlags& flags) {
-    mRotInfo.flags &= ~utils::OV_MDP_SECURE_OVERLAY_SESSION;
-    if (flags & utils::OV_MDP_SECURE_OVERLAY_SESSION) {
-        mRotInfo.flags |= utils::OV_MDP_SECURE_OVERLAY_SESSION;
-    }
+    mRotInfo.flags |= flags;
 }
 
 void MdssRot::setTransform(const utils::eTransform& rot)
