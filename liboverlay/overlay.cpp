@@ -42,7 +42,7 @@ Overlay::Overlay() {
     int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
     if (mdpVersion > qdutils::MDP_V3_1) numPipes = 3;
     if (mdpVersion >= qdutils::MDP_V4_2) numPipes = 4;
-    if (mdpVersion >= qdutils::MDSS_V5) numPipes = 6;
+    if (mdpVersion >= qdutils::MDSS_V5) numPipes = 8;
 
     if (property_get("debug.mdpcomp.maxlayer", property, NULL) > 0) {
         PipeBook::NUM_PIPES = atoi(property);
@@ -190,6 +190,13 @@ void Overlay::setSource(const utils::PipeArgs args,
     } else {
         clearMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_SHARE);
     }
+
+    if(dest == OV_DMA0 || dest == OV_DMA1) {
+        setMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_FORCE_DMA);
+    } else {
+        clearMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_FORCE_DMA);
+    }
+
     mPipeBook[index].mPipe->setSource(newArgs);
 }
 
