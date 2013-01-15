@@ -324,11 +324,17 @@ int MDPCompLowRes::configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
         orient = static_cast<ovutils::eTransform>(layer->transform);
     }
 
+    ovutils::eRotFlags rotFlags = ovutils::ROT_FLAGS_NONE;
+    if(isYuvBuffer(hnd) && (ctx->mMDP.version >= qdutils::MDP_V4_2 &&
+                           ctx->mMDP.version < qdutils::MDSS_V5)) {
+        rotFlags = ovutils::ROT_DOWNSCALE_ENABLED;
+    }
+
     ovutils::PipeArgs parg(mdpFlags,
             info,
             zOrder,
             ovutils::IS_FG_OFF,
-            ovutils::ROT_FLAG_DISABLED);
+            rotFlags);
 
     ov.setSource(parg, dest);
 
