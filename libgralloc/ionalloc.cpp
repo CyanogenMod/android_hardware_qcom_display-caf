@@ -66,6 +66,10 @@ int IonAlloc::alloc_buffer(alloc_data& data)
 {
     Locker::Autolock _l(mLock);
     int err = 0;
+#ifdef OLD_ION_API
+    int ionSyncFd = FD_INIT;
+    int iFd = FD_INIT;
+#endif
     struct ion_handle_data handle_data;
     struct ion_fd_data fd_data;
     struct ion_allocation_data ionAllocData;
@@ -73,6 +77,9 @@ int IonAlloc::alloc_buffer(alloc_data& data)
 
     ionAllocData.len = data.size;
     ionAllocData.align = data.align;
+#ifdef OLD_ION_API
+    ionAllocData.flags = data.flags;
+#else
     ionAllocData.heap_mask = data.flags & ~ION_SECURE;
     ionAllocData.flags = data.uncached ? 0 : ION_FLAG_CACHED;
 
@@ -80,24 +87,59 @@ int IonAlloc::alloc_buffer(alloc_data& data)
     //  ionallocdata structure.
     if (data.flags & ION_SECURE)
         ionAllocData.flags |= ION_SECURE;
+#endif
 
     err = open_device();
     if (err)
         return err;
 
-    if(ioctl(mIonFd, ION_IOC_ALLOC, &ionAllocData)) {
+#ifdef OLD_ION_API
+    if(data.uncached) {
+        // Use the sync FD to alloc and map
+        // when we need uncached memory
+        ionSyncFd = open(ION_DEVICE, O_RDONLY|O_DSYNC);
+        if(ionSyncFd < 0) {
+            ALOGE("%s: Failed to open ion device - %s",
+                  __FUNCTION__, strerror(errno));
+            return -errno;
+        }
+        iFd = ionSyncFd;
+    } else {
+        iFd = mIonFd;
+    }
+
+    if(ioctl(iFd, ION_IOC_ALLOC, &ionAllocData))
+#else
+    if(ioctl(mIonFd, ION_IOC_ALLOC, &ionAllocData))
+#endif
+    {
         err = -errno;
         ALOGE("ION_IOC_ALLOC failed with error - %s", strerror(errno));
+#ifdef OLD_ION_API
+        if(ionSyncFd >= 0)
+            close(ionSyncFd);
+        ionSyncFd = FD_INIT;
+#endif
         return err;
     }
 
     fd_data.handle = ionAllocData.handle;
     handle_data.handle = ionAllocData.handle;
-    if(ioctl(mIonFd, ION_IOC_MAP, &fd_data)) {
+#ifdef OLD_ION_API
+    if(ioctl(iFd, ION_IOC_MAP, &fd_data))
+#else
+    if(ioctl(mIonFd, ION_IOC_MAP, &fd_data))
+#endif
+    {
         err = -errno;
         ALOGE("%s: ION_IOC_MAP failed with error - %s",
               __FUNCTION__, strerror(errno));
         ioctl(mIonFd, ION_IOC_FREE, &handle_data);
+#ifdef OLD_ION_API
+        if(ionSyncFd >= 0)
+            close(ionSyncFd);
+        ionSyncFd = FD_INIT;
+#endif
         return err;
     }
 
@@ -109,12 +151,22 @@ int IonAlloc::alloc_buffer(alloc_data& data)
             ALOGE("%s: Failed to map the allocated memory: %s",
                   __FUNCTION__, strerror(errno));
             ioctl(mIonFd, ION_IOC_FREE, &handle_data);
+#ifdef OLD_ION_API
+            ionSyncFd = FD_INIT;
+#endif
             return err;
         }
         memset(base, 0, ionAllocData.len);
         // Clean cache after memset
         clean_buffer(base, data.size, data.offset, fd_data.fd);
     }
+
+#ifdef OLD_ION_API
+    //Close the uncached FD since we no longer need it;
+    if(ionSyncFd >= 0)
+        close(ionSyncFd);
+    ionSyncFd = FD_INIT;
+#endif
 
     data.base = base;
     data.fd = fd_data.fd;
@@ -203,11 +255,16 @@ int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd)
     flush_data.offset  = offset;
     flush_data.length  = size;
 
+#ifdef OLD_ION_API
+    if(ioctl(mIonFd, ION_IOC_CLEAN_INV_CACHES, &flush_data))
+#else
     struct ion_custom_data d;
     d.cmd = ION_IOC_CLEAN_INV_CACHES;
     d.arg = (unsigned long int)&flush_data;
 
-    if(ioctl(mIonFd, ION_IOC_CUSTOM, &d)) {
+    if(ioctl(mIonFd, ION_IOC_CUSTOM, &d))
+#endif
+    {
         err = -errno;
         ALOGE("%s: ION_IOC_CLEAN_INV_CACHES failed with error - %s",
 

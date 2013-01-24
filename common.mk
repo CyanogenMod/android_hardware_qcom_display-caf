@@ -29,6 +29,10 @@ ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
     common_flags += -DVENUS_COLOR_FORMAT
 endif
 
+ifeq ($(BOARD_HAVE_OLD_ION_API), true)
+    common_flags += -DOLD_ION_API
+endif
+
 common_deps  :=
 kernel_includes :=
 
