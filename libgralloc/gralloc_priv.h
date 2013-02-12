@@ -54,6 +54,16 @@ enum {
      * cannot be used with noncontiguous heaps */
     GRALLOC_USAGE_PRIVATE_UNCACHED        =       0x02000000,
 
+#ifndef QCOM_BSP
+    /* This flag can be set to disable genlock synchronization
+     * for the gralloc buffer. If this flag is set the caller
+     * is required to perform explicit synchronization.
+     * WARNING - flag is outside the standard PRIVATE region
+     * and may need to be moved if the gralloc API changes
+     */
+    GRALLOC_USAGE_PRIVATE_UNSYNCHRONIZED  =       0X04000000,
+#endif
+
     /* Buffer content should be displayed on an external display only */
     GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY   =       0x08000000,
 
@@ -165,7 +175,10 @@ struct private_handle_t : public native_handle {
 
         // file-descriptors
         int     fd;
-#ifdef QCOM_BSP
+#ifndef QCOM_BSP
+        // genlock handle to be dup'd by the binder
+        int     genlockHandle;
+#else
         int     fd_metadata;          // fd for the meta-data
 #endif
         // ints
@@ -180,10 +193,16 @@ struct private_handle_t : public native_handle {
 #endif
         // The gpu address mapped into the mmu.
         int     gpuaddr;
+#ifndef QCOM_BSP
+        int     pid;   // deprecated
+#endif
         int     format;
         int     width;
         int     height;
-#ifdef QCOM_BSP
+#ifndef QCOM_BSP
+        // local fd of the genlock device.
+        int     genlockPrivFd;
+#else
         int     base_metadata;
 #endif
 
@@ -196,7 +215,9 @@ struct private_handle_t : public native_handle {
                          int format,int width, int height, int eFd = -1,
                          int eOffset = 0, int eBase = 0) :
             fd(fd),
-#ifdef QCOM_BSP
+#ifndef QCOM_BSP
+            genlockHandle(-1),
+#else
             fd_metadata(eFd),
 #endif
             magic(sMagic),  flags(flags), size(size), offset(0),
@@ -205,9 +226,14 @@ struct private_handle_t : public native_handle {
             offset_metadata(eOffset),
 #endif
             gpuaddr(0),
-            format(format), width(width), height(height)
-#ifdef QCOM_BSP
-            ,base_metadata(eBase)
+#ifndef QCOM_BSP
+            pid(getpid()),
+#endif
+            format(format), width(width), height(height),
+#ifndef QCOM_BSP
+            genlockPrivFd(-1)
+#else
+            base_metadata(eBase)
 #endif
         {
             version = sizeof(native_handle);

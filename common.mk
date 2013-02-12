@@ -1,5 +1,6 @@
 #Common headers
 common_includes := hardware/qcom/display-caf/libgralloc
+common_includes += hardware/qcom/display-caf/libgenlock
 common_includes += hardware/qcom/display-caf/liboverlay
 common_includes += hardware/qcom/display-caf/libcopybit
 common_includes += hardware/qcom/display-caf/libqdutils
