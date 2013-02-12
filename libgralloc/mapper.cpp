@@ -34,7 +34,9 @@
 
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
+#ifdef USE_GENLOCK
 #include <genlock.h>
+#endif
 
 #include <linux/android_pmem.h>
 
@@ -162,7 +164,7 @@ int gralloc_register_buffer(gralloc_module_t const* module,
         ALOGE("%s: gralloc_map failed", __FUNCTION__);
         return err;
     }
-
+#ifdef USE_GENLOCK
     // Reset the genlock private fd flag in the handle
     hnd->genlockPrivFd = -1;
 
@@ -181,6 +183,8 @@ int gralloc_register_buffer(gralloc_module_t const* module,
         hnd->base = 0;
         return -EINVAL;
     }
+#endif
+
     return 0;
 }
 
@@ -205,6 +209,7 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
 #ifdef QCOM_BSP
     hnd->base_metadata = 0;
 #endif
+#ifdef USE_GENLOCK
     // Release the genlock
     if (-1 != hnd->genlockHandle) {
         return genlock_release_lock((native_handle_t *)handle);
@@ -212,6 +217,7 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
         ALOGE("%s: there was no genlock attached to this buffer", __FUNCTION__);
         return -EINVAL;
     }
+#endif
     return 0;
 }
 
@@ -260,6 +266,7 @@ int gralloc_lock(gralloc_module_t const* module,
         }
         *vaddr = (void*)hnd->base;
 
+#ifdef USE_GENLOCK
         // Lock the buffer for read/write operation as specified. Write lock
         // has a higher priority over read lock.
         int lockType = 0;
@@ -280,6 +287,7 @@ int gralloc_lock(gralloc_module_t const* module,
             // Mark this buffer as locked for SW read/write operation.
             hnd->flags |= private_handle_t::PRIV_FLAGS_SW_LOCK;
         }
+#endif
 
         //Invalidate if reading in software. No need to do this for the metadata
         //buffer as it is only read/written in software.
@@ -295,6 +303,17 @@ int gralloc_lock(gralloc_module_t const* module,
     } else {
         hnd->flags |= private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH;
     }
+#ifdef USE_GENLOCK
+    if ((hnd->flags & private_handle_t::PRIV_FLAGS_SW_LOCK)) {
+        // Unlock the buffer.
+        if (GENLOCK_NO_ERROR != genlock_unlock_buffer((native_handle_t *)handle)) {
+            ALOGE("%s: genlock_unlock_buffer failed", __FUNCTION__);
+            return -EINVAL;
+        } else
+            hnd->flags &= ~private_handle_t::PRIV_FLAGS_SW_LOCK;
+    }
+#endif
+
     return err;
 }
 
@@ -322,6 +341,7 @@ int gralloc_unlock(gralloc_module_t const* module,
                                      CACHE_INVALIDATE);
     }
 
+#ifdef USE_GENLOCK
     if ((hnd->flags & private_handle_t::PRIV_FLAGS_SW_LOCK)) {
         // Unlock the buffer.
         if (GENLOCK_NO_ERROR != genlock_unlock_buffer((native_handle_t *)handle)) {
@@ -330,6 +350,8 @@ int gralloc_unlock(gralloc_module_t const* module,
         } else
             hnd->flags &= ~private_handle_t::PRIV_FLAGS_SW_LOCK;
     }
+#endif
+
     return err;
 }
 
