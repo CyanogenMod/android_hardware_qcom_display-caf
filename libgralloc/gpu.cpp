@@ -21,7 +21,9 @@
 #include <cutils/properties.h>
 #include <sys/mman.h>
 
+#ifndef QCOM_BSP
 #include <genlock.h>
+#endif
 
 #include "gr.h"
 #include "gpu.h"
@@ -95,9 +97,12 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
         ALOGE_IF(eDataErr, "gralloc failed for eDataErr=%s",
                                           strerror(-eDataErr));
 #endif
+
+#ifndef QCOM_BSP
         if (usage & GRALLOC_USAGE_PRIVATE_UNSYNCHRONIZED) {
             flags |= private_handle_t::PRIV_FLAGS_UNSYNCHRONIZED;
         }
+#endif
 
         if (usage & GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY) {
             flags |= private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY;
@@ -135,6 +140,10 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
 #endif
         hnd->offset = data.offset;
         hnd->base = int(data.base) + data.offset;
+#ifdef QCOM_BSP
+        hnd->gpuaddr = 0;
+#endif
+
         *pHandle = hnd;
     }
 
@@ -199,7 +208,7 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
     if (err < 0) {
         return err;
     }
-
+#ifndef QCOM_BSP
     // Create a genlock lock for this buffer handle.
     err = genlock_create_lock((native_handle_t*)(*pHandle));
     if (err) {
@@ -207,6 +216,8 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
         free_impl(reinterpret_cast<private_handle_t*>(pHandle));
         return err;
     }
+#endif
+
     *pStride = alignedw;
     return 0;
 }
@@ -231,11 +242,13 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
         return err;
 #endif
 
+#ifndef QCOM_BSP
     // Release the genlock
     err = genlock_release_lock((native_handle_t*)hnd);
     if (err) {
         ALOGE("%s: genlock_release_lock failed", __FUNCTION__);
     }
+#endif
 
     delete hnd;
     return 0;
