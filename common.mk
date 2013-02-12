@@ -1,6 +1,5 @@
 #Common headers
 common_includes := hardware/qcom/display-caf/libgralloc
-common_includes += hardware/qcom/display-caf/libgenlock
 common_includes += hardware/qcom/display-caf/liboverlay
 common_includes += hardware/qcom/display-caf/libcopybit
 common_includes += hardware/qcom/display-caf/libqdutils
@@ -37,4 +36,9 @@ ifeq ($(TARGET_USES_QCOM_BSP),true)
     common_flags += -DQCOM_BSP
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+    QCOM_USE_GENLOCK := false
+else
+    common_includes += hardware/qcom/display-caf/libgenlock
+    LOCAL_CFLAGS += -DUSE_GENLOCK
+    QCOM_USE_GENLOCK := true
 endif
