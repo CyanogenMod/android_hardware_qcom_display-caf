@@ -123,6 +123,10 @@ int mapFrameBufferLocked(struct private_module_t* module)
     char name[64];
     char property[PROPERTY_VALUE_MAX];
 
+#if defined(MSMFB_METADATA_SET) || defined(MSMFB_METADATA_GET)
+    struct msmfb_metadata metadata;
+#endif
+
     while ((fd==-1) && device_template[i]) {
         snprintf(name, 64, device_template[i], 0);
         fd = open(name, O_RDWR, 0);
@@ -223,8 +227,6 @@ int mapFrameBufferLocked(struct private_module_t* module)
     info.yres_virtual = (size * numberOfBuffers) / line_length;
 
 #ifdef MSMFB_METADATA_SET
-    struct msmfb_metadata metadata;
-
     metadata.op = metadata_op_base_blend;
     metadata.flags = 0;
     metadata.data.blend_cfg.is_premultiplied = 1;
@@ -256,7 +258,6 @@ int mapFrameBufferLocked(struct private_module_t* module)
     float xdpi = (info.xres * 25.4f) / info.width;
     float ydpi = (info.yres * 25.4f) / info.height;
 #ifdef MSMFB_METADATA_GET
-    struct msmfb_metadata metadata;
     memset(&metadata, 0 , sizeof(metadata));
     metadata.op = metadata_op_frame_rate;
     if (ioctl(fd, MSMFB_METADATA_GET, &metadata) == -1) {
