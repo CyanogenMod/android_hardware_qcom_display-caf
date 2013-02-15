@@ -216,14 +216,17 @@ void MDPCompLowRes::reset(hwc_context_t *ctx,
 void MDPCompLowRes::setVidInfo(hwc_layer_1_t *layer,
         ovutils::eMdpFlags &mdpFlags) {
     private_handle_t *hnd = (private_handle_t *)layer->handle;
+#ifdef QCOM_BSP
     MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-
+#endif
     if(isSecureBuffer(hnd)) {
         ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_SECURE_OVERLAY_SESSION);
     }
+#ifdef QCOM_BSP
     if((metadata->operation & PP_PARAM_INTERLACED) && metadata->interlaced) {
         ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_DEINTERLACE);
     }
+#endif
 }
 
 bool MDPCompLowRes::isWidthValid(hwc_context_t *ctx, hwc_layer_1_t *layer) {

@@ -114,10 +114,12 @@ bool VideoOverlay::configure(hwc_context_t *ctx, int dpy,
                 ovutils::OV_MDP_BLEND_FG_PREMULT);
     }
 
+#ifdef QCOM_BSP
     MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
     if ((metadata->operation & PP_PARAM_INTERLACED) && metadata->interlaced) {
         ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_DEINTERLACE);
     }
+#endif
 
     ovutils::eIsFg isFgFlag = ovutils::IS_FG_OFF;
     if (ctx->listStats[dpy].numAppLayers == 1) {
