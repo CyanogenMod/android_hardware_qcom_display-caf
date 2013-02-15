@@ -40,7 +40,8 @@ Overlay::Overlay() {
     int numPipes = 0;
     char property[PROPERTY_VALUE_MAX];
     int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
-    if (mdpVersion > qdutils::MDP_V3_1) numPipes = 4;
+    if (mdpVersion > qdutils::MDP_V3_1) numPipes = 3;
+    if (mdpVersion >= qdutils::MDP_V4_2) numPipes = 4;
     if (mdpVersion >= qdutils::MDSS_V5) numPipes = 6;
 
     if (property_get("debug.mdpcomp.maxlayer", property, NULL) > 0) {

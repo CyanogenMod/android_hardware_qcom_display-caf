@@ -51,7 +51,8 @@ bool MDPComp::init(hwc_context_t *ctx) {
         return false;
     }
 
-    if(!setupBasePipe(ctx)) {
+    if((qdutils::MDPVersion::getInstance().getMDPVersion() >= qdutils::MDP_V4_2) &&
+            !setupBasePipe(ctx)) {
         ALOGE("%s: Failed to setup primary base pipe", __FUNCTION__);
         return false;
     }
