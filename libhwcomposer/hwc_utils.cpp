@@ -625,7 +625,9 @@ void setMdpFlags(hwc_layer_1_t *layer,
         ovutils::eMdpFlags &mdpFlags,
         int rotDownscale) {
     private_handle_t *hnd = (private_handle_t *)layer->handle;
+#ifdef QCOM_BSP
     MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+#endif
     const int& transform = layer->transform;
 
     if(layer->blending == HWC_BLENDING_PREMULT) {
@@ -638,11 +640,13 @@ void setMdpFlags(hwc_layer_1_t *layer,
             ovutils::setMdpFlags(mdpFlags,
                     ovutils::OV_MDP_SECURE_OVERLAY_SESSION);
         }
+#ifdef QCOM_BSP
         if(metadata && (metadata->operation & PP_PARAM_INTERLACED) &&
                 metadata->interlaced) {
             ovutils::setMdpFlags(mdpFlags,
                     ovutils::OV_MDP_DEINTERLACE);
         }
+#endif
         //Pre-rotation will be used using rotator.
         if(transform & HWC_TRANSFORM_ROT_90) {
             ovutils::setMdpFlags(mdpFlags,

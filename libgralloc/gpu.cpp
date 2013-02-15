@@ -79,6 +79,7 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
     err = mAllocCtrl->allocate(data, usage);
 
     if (!err) {
+#ifdef QCOM_BSP
         /* allocate memory for enhancement data */
         alloc_data eData;
         eData.fd = -1;
@@ -91,6 +92,7 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
         int eDataErr = mAllocCtrl->allocate(eData, eDataUsage);
         ALOGE_IF(eDataErr, "gralloc failed for eDataErr=%s",
                                           strerror(-eDataErr));
+#endif
 
         if (usage & GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY) {
             flags |= private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY;
@@ -116,11 +118,16 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
         }
 
         flags |= data.allocType;
+#ifdef QCOM_BSP
         int eBaseAddr = int(eData.base) + eData.offset;
         private_handle_t *hnd = new private_handle_t(data.fd, size, flags,
                 bufferType, format, width, height, eData.fd, eData.offset,
                 eBaseAddr);
-
+#else
+        private_handle_t* hnd = new private_handle_t(data.fd, size, flags,
+                bufferType, format, width,
+                height);
+#endif
         hnd->offset = data.offset;
         hnd->base = int(data.base) + data.offset;
         hnd->gpuaddr = 0;
@@ -203,6 +210,7 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
                                     hnd->offset, hnd->fd);
     if(err)
         return err;
+#ifdef QCOM_BSP
     // free the metadata space
     unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
     err = memalloc->free_buffer((void*)hnd->base_metadata,
@@ -210,7 +218,7 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
                                 hnd->fd_metadata);
     if (err)
         return err;
-
+#endif
     delete hnd;
     return 0;
 }

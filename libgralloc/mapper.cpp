@@ -77,6 +77,7 @@ static int gralloc_map(gralloc_module_t const* module,
         hnd->base = intptr_t(mappedAddress) + hnd->offset;
         //LOGD("gralloc_map() succeeded fd=%d, off=%d, size=%d, vaddr=%p",
         //        hnd->fd, hnd->offset, hnd->size, mappedAddress);
+#ifdef QCOM_BSP
         mappedAddress = MAP_FAILED;
         size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
         err = memalloc->map_buffer(&mappedAddress, size,
@@ -88,6 +89,7 @@ static int gralloc_map(gralloc_module_t const* module,
             return -errno;
         }
         hnd->base_metadata = intptr_t(mappedAddress) + hnd->offset_metadata;
+#endif
     }
     *vaddr = (void*)hnd->base;
     return 0;
@@ -107,18 +109,22 @@ static int gralloc_unmap(gralloc_module_t const* module,
             if (err) {
                 ALOGE("Could not unmap memory at address %p", base);
             }
+#ifdef QCOM_BSP
             base = (void*)hnd->base_metadata;
             size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
             err = memalloc->unmap_buffer(base, size, hnd->offset_metadata);
             if (err) {
                 ALOGE("Could not unmap memory at address %p", base);
             }
+#endif
         }
     }
     /* need to initialize the pointer to NULL otherwise unmapping for that
      * buffer happens twice which leads to crash */
     hnd->base = 0;
+#ifdef QCOM_BSP
     hnd->base_metadata = 0;
+#endif
     return 0;
 }
 
@@ -145,7 +151,9 @@ int gralloc_register_buffer(gralloc_module_t const* module,
 
     private_handle_t* hnd = (private_handle_t*)handle;
     hnd->base = 0;
+#ifdef QCOM_BSP
     hnd->base_metadata = 0;
+#endif
     void *vaddr;
     int err = gralloc_map(module, handle, &vaddr);
     if (err) {
@@ -174,7 +182,9 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
         gralloc_unmap(module, handle);
     }
     hnd->base = 0;
+#ifdef QCOM_BSP
     hnd->base_metadata = 0;
+#endif
     return 0;
 }
 

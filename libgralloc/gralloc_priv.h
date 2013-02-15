@@ -76,7 +76,11 @@ enum {
 enum {
     /* Gralloc perform enums
     */
+#ifdef QCOM_BSP
     GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER = 1,
+#else
+    GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER = 0x080000001,
+#endif
     GRALLOC_MODULE_PERFORM_GET_STRIDE,
 };
 
@@ -161,7 +165,9 @@ struct private_handle_t : public native_handle {
 
         // file-descriptors
         int     fd;
+#ifdef QCOM_BSP
         int     fd_metadata;          // fd for the meta-data
+#endif
         // ints
         int     magic;
         int     flags;
@@ -169,13 +175,17 @@ struct private_handle_t : public native_handle {
         int     offset;
         int     bufferType;
         int     base;
+#ifdef QCOM_BSP
         int     offset_metadata;
+#endif
         // The gpu address mapped into the mmu.
         int     gpuaddr;
         int     format;
         int     width;
         int     height;
+#ifdef QCOM_BSP
         int     base_metadata;
+#endif
 
 #ifdef __cplusplus
         static const int sNumInts = 12;
@@ -185,11 +195,20 @@ struct private_handle_t : public native_handle {
         private_handle_t(int fd, int size, int flags, int bufferType,
                          int format,int width, int height, int eFd = -1,
                          int eOffset = 0, int eBase = 0) :
-            fd(fd), fd_metadata(eFd), magic(sMagic),
-            flags(flags), size(size), offset(0), bufferType(bufferType),
-            base(0), offset_metadata(eOffset), gpuaddr(0),
-            format(format), width(width), height(height),
-            base_metadata(eBase)
+            fd(fd),
+#ifdef QCOM_BSP
+            fd_metadata(eFd),
+#endif
+            magic(sMagic),  flags(flags), size(size), offset(0),
+            bufferType(bufferType), base(0),
+#ifdef QCOM_BSP
+            offset_metadata(eOffset),
+#endif
+            gpuaddr(0),
+            format(format), width(width), height(height)
+#ifdef QCOM_BSP
+            ,base_metadata(eBase)
+#endif
         {
             version = sizeof(native_handle);
             numInts = sNumInts;
