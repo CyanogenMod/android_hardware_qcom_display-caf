@@ -625,11 +625,13 @@ static int flush_get_fence_copybit (struct copybit_device_t *dev, int* fd)
         pthread_mutex_unlock(&ctx->wait_cleanup_lock);
         return COPYBIT_FAILURE;
     }
+#ifdef QCOM_BSP
     if(LINK_c2dCreateFenceFD(ctx->dst[ctx->dst_surface_type], ctx->time_stamp,
                                                                         fd)) {
         ALOGE("%s: LINK_c2dCreateFenceFD ERROR", __FUNCTION__);
         status = COPYBIT_FAILURE;
     }
+#endif
     if(status == COPYBIT_SUCCESS) {
         //signal the wait_thread
         ctx->wait_timestamp = true;
@@ -1468,15 +1470,18 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
                                          "c2dMapAddr");
     *(void **)&LINK_c2dUnMapAddr = ::dlsym(ctx->libc2d2,
                                            "c2dUnMapAddr");
+#ifdef QCOM_BSP
     *(void **)&LINK_c2dGetDriverCapabilities = ::dlsym(ctx->libc2d2,
                                            "c2dGetDriverCapabilities");
     *(void **)&LINK_c2dCreateFenceFD = ::dlsym(ctx->libc2d2,
                                            "c2dCreateFenceFD");
-
+#endif
     if (!LINK_c2dCreateSurface || !LINK_c2dUpdateSurface || !LINK_c2dReadSurface
         || !LINK_c2dDraw || !LINK_c2dFlush || !LINK_c2dWaitTimestamp ||
-        !LINK_c2dFinish  || !LINK_c2dDestroySurface ||
-        !LINK_c2dGetDriverCapabilities || !LINK_c2dCreateFenceFD) {
+#ifdef QCOM_BSP
+        !LINK_c2dGetDriverCapabilities || !LINK_c2dCreateFenceFD ||
+#endif
+        !LINK_c2dFinish  || !LINK_c2dDestroySurface) {
         ALOGE("%s: dlsym ERROR", __FUNCTION__);
         clean_up(ctx);
         status = COPYBIT_FAILURE;
@@ -1637,6 +1642,7 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
         return status;
     }
 
+#ifdef QCOM_BSP
     if (LINK_c2dGetDriverCapabilities(&(ctx->c2d_driver_info))) {
          ALOGE("%s: LINK_c2dGetDriverCapabilities failed", __FUNCTION__);
          clean_up(ctx);
@@ -1644,6 +1650,8 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
         *device = NULL;
         return status;
     }
+#endif
+
     // Initialize context variables.
     ctx->trg_transform = C2D_TARGET_ROTATE_0;
 
