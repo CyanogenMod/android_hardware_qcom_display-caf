@@ -49,7 +49,6 @@ public:
     void  setExtDpyNum(int extDpyNum) { mExtDpyNum = extDpyNum;};
     int  getExternalType() {return mConnectedFbNum;};
     bool isWFDActive() {return (mConnectedFbNum == mWfdFbNum);};
-    bool post();
     void setHPD(uint32_t startEnd);
     void setEDIDMode(int resMode);
     void setActionSafeDimension(int w, int h);
