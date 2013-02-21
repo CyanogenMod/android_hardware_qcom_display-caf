@@ -44,7 +44,6 @@
 
 //Fwrd decls
 struct hwc_context_t;
-struct framebuffer_device_t;
 
 namespace ovutils = overlay::utils;
 
@@ -264,8 +263,6 @@ struct vsync_state {
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     const hwc_procs_t* proc;
-    //Framebuffer device
-    framebuffer_device_t *mFbDev;
 
     //CopyBit objects
     qhwc::CopyBit *mCopyBit[MAX_DISPLAYS];
