@@ -121,7 +121,12 @@ static int gralloc_unmap(gralloc_module_t const* module,
 #endif
         }
     }
+    /* need to initialize the pointer to NULL otherwise unmapping for that
+     * buffer happens twice which leads to crash */
     hnd->base = 0;
+#ifdef QCOM_BSP
+    hnd->base_metadata = 0;
+#endif
     return 0;
 }
 
@@ -148,6 +153,9 @@ int gralloc_register_buffer(gralloc_module_t const* module,
 
     private_handle_t* hnd = (private_handle_t*)handle;
     hnd->base = 0;
+#ifdef QCOM_BSP
+    hnd->base_metadata = 0;
+#endif
     void *vaddr;
     int err = gralloc_map(module, handle, &vaddr);
     if (err) {
@@ -194,6 +202,9 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
         gralloc_unmap(module, handle);
     }
     hnd->base = 0;
+#ifdef QCOM_BSP
+    hnd->base_metadata = 0;
+#endif
     // Release the genlock
     if (-1 != hnd->genlockHandle) {
         return genlock_release_lock((native_handle_t *)handle);
