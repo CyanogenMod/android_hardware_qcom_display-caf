@@ -27,6 +27,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
     common_flags += -DVENUS_COLOR_FORMAT
+    common_flags += -DMDSS_TARGET
 endif
 
 common_deps  :=
