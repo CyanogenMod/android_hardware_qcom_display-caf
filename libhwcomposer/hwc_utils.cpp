@@ -77,7 +77,6 @@ void initContext(hwc_context_t *ctx)
         IFBUpdate::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres,
         HWC_DISPLAY_PRIMARY);
 
-#ifdef QCOM_BSP
     char value[PROPERTY_VALUE_MAX];
     // Check if the target supports copybit compostion (dyn/mdp/c2d) to
     // decide if we need to open the copybit module.
@@ -89,7 +88,6 @@ void initContext(hwc_context_t *ctx)
                            qdutils::COMPOSITION_TYPE_C2D)) {
             ctx->mCopyBit[HWC_DISPLAY_PRIMARY] = new CopyBit();
     }
-#endif
 
     ctx->mExtDisplay = new ExternalDisplay(ctx);
     for (uint32_t i = 0; i < MAX_DISPLAYS; i++)

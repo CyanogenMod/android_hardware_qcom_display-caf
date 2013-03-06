@@ -44,6 +44,8 @@ public:
 
     void setReleaseFd(int fd);
 
+    void dump(android::String8& buf);
+
 private:
     // holds the copybit device
     struct copybit_device_t *mEngine;

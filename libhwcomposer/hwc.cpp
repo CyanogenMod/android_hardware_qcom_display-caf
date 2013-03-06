@@ -526,6 +526,8 @@ void hwc_dump(struct hwc_composer_device_1* dev, char *buff, int buff_len)
     dumpsys_log(aBuf, "  MDPVersion=%d\n", ctx->mMDP.version);
     dumpsys_log(aBuf, "  DisplayPanel=%c\n", ctx->mMDP.panel);
     ctx->mMDPComp->dump(aBuf);
+    if (ctx->mCopyBit[HWC_DISPLAY_PRIMARY])
+        ctx->mCopyBit[HWC_DISPLAY_PRIMARY]->dump(aBuf);
     char ovDump[2048] = {'\0'};
     ctx->mOverlay->getDump(ovDump, 2048);
     dumpsys_log(aBuf, ovDump);
