@@ -311,7 +311,6 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].needsAlphaScale = false;
     ctx->listStats[dpy].preMultipliedAlpha = false;
     ctx->listStats[dpy].yuvCount = 0;
-    ctx->mDMAInUse = false;
 
     for (size_t i = 0; i < list->numHwLayers; i++) {
         hwc_layer_1_t const* layer = &list->hwLayers[i];
@@ -330,8 +329,8 @@ void setListStats(hwc_context_t *ctx,
             ctx->listStats[dpy].yuvIndices[yuvCount] = i;
             yuvCount++;
 
-            if((layer->transform & HWC_TRANSFORM_ROT_90) && !ctx->mDMAInUse)
-                ctx->mDMAInUse = true;
+            if(layer->transform & HWC_TRANSFORM_ROT_90)
+                ctx->mNeedsRotator = true;
         }
         if(layer->blending == HWC_BLENDING_PREMULT)
             ctx->listStats[dpy].preMultipliedAlpha = true;
