@@ -40,6 +40,11 @@
 using gralloc::IonAlloc;
 
 #define ION_DEVICE "/dev/ion"
+#ifdef QCOM_BSP
+#ifndef NEW_ION_API
+#define NEW_ION_API
+#endif
+#endif
 
 int IonAlloc::open_device()
 {
