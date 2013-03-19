@@ -125,7 +125,7 @@ bool VideoOverlayLowRes::configure(hwc_context_t *ctx,
 
     mDest = dest;
     ovutils::eMdpFlags mdpFlags = ovutils::OV_MDP_FLAGS_NONE;
-    ovutils::eZorder zOrder = ovutils::ZORDER_1;
+    ovutils::eZorder zOrder = ovutils::ZORDER_0;
     ovutils::eIsFg isFg = ovutils::IS_FG_OFF;
     if (ctx->listStats[mDpy].numAppLayers == 1) {
         isFg = ovutils::IS_FG_SET;
@@ -167,6 +167,10 @@ bool VideoOverlayLowRes::draw(hwc_context_t *ctx,
     }
 
     return true;
+}
+
+bool VideoOverlayLowRes::isModeOn() {
+    return mModeOn;
 }
 
 //===========VideoOverlayHighRes=========================
@@ -237,7 +241,7 @@ bool VideoOverlayHighRes::configure(hwc_context_t *ctx,
     }
 
     ovutils::eMdpFlags mdpFlags = ovutils::OV_MDP_FLAGS_NONE;
-    ovutils::eZorder zOrder = ovutils::ZORDER_1;
+    ovutils::eZorder zOrder = ovutils::ZORDER_0;
     ovutils::eIsFg isFg = ovutils::IS_FG_OFF;
     if (ctx->listStats[mDpy].numAppLayers == 1) {
         isFg = ovutils::IS_FG_SET;
@@ -292,5 +296,8 @@ bool VideoOverlayHighRes::draw(hwc_context_t *ctx,
     return true;
 }
 
+bool VideoOverlayHighRes::isModeOn() {
+    return mModeOn;
+}
 
 }; //namespace qhwc
