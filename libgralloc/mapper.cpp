@@ -281,11 +281,19 @@ int gralloc_lock(gralloc_module_t const* module,
             hnd->flags |= private_handle_t::PRIV_FLAGS_SW_LOCK;
         }
 
+        //Invalidate if reading in software. No need to do this for the metadata
+        //buffer as it is only read/written in software.
+        IMemAlloc* memalloc = getAllocator(hnd->flags) ;
+        err = memalloc->clean_buffer((void*)hnd->base,
+                                     hnd->size, hnd->offset, hnd->fd,
+                                     CACHE_INVALIDATE);
         if ((usage & GRALLOC_USAGE_SW_WRITE_MASK) &&
             !(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
             // Mark the buffer to be flushed after cpu read/write
             hnd->flags |= private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
         }
+    } else {
+        hnd->flags |= private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH;
     }
     return err;
 }
@@ -295,14 +303,14 @@ int gralloc_unlock(gralloc_module_t const* module,
 {
     if (private_handle_t::validate(handle) < 0)
         return -EINVAL;
-
+    int err = 0;
     private_handle_t* hnd = (private_handle_t*)handle;
+    IMemAlloc* memalloc = getAllocator(hnd->flags);
 
     if (hnd->flags & private_handle_t::PRIV_FLAGS_NEEDS_FLUSH) {
-        int err;
-        IMemAlloc* memalloc = getAllocator(hnd->flags) ;
         err = memalloc->clean_buffer((void*)hnd->base,
-                                     hnd->size, hnd->offset, hnd->fd);
+                                     hnd->size, hnd->offset, hnd->fd,
+                                     CACHE_CLEAN_AND_INVALIDATE);
         ALOGE_IF(err < 0, "cannot flush handle %p (offs=%x len=%x, flags = 0x%x) err=%s\n",
                  hnd, hnd->offset, hnd->size, hnd->flags, strerror(errno));
 #ifdef QCOM_BSP
@@ -314,6 +322,14 @@ int gralloc_unlock(gralloc_module_t const* module,
                 hnd->flags, strerror(errno));
 #endif
         hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
+    } else if(hnd->flags & private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH) {
+        hnd->flags &= ~private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH;
+    } else {
+        //Probably a round about way to do this, but this avoids adding new
+        //flags
+        err = memalloc->clean_buffer((void*)hnd->base,
+                                     hnd->size, hnd->offset, hnd->fd,
+                                     CACHE_INVALIDATE);
     }
 
     if ((hnd->flags & private_handle_t::PRIV_FLAGS_SW_LOCK)) {
@@ -324,7 +340,7 @@ int gralloc_unlock(gralloc_module_t const* module,
         } else
             hnd->flags &= ~private_handle_t::PRIV_FLAGS_SW_LOCK;
     }
-    return 0;
+    return err;
 }
 
 /*****************************************************************************/
