@@ -167,6 +167,8 @@ struct private_handle_t : public native_handle {
         int     fd;
 #ifdef QCOM_BSP
         int     fd_metadata;          // fd for the meta-data
+#else
+        int     genlockHandle;        // no-op on MR-1
 #endif
         // ints
         int     magic;
@@ -180,21 +182,21 @@ struct private_handle_t : public native_handle {
 #endif
         // The gpu address mapped into the mmu.
         int     gpuaddr;
+#ifndef QCOM_BSP
+        int     pid;   // deprecated
+#endif
         int     format;
         int     width;
         int     height;
 #ifdef QCOM_BSP
         int     base_metadata;
+#else
+        int     genlockPrivFd;        // no-op on MR-1
 #endif
 
 #ifdef __cplusplus
-#ifdef QCOM_BSP
         static const int sNumInts = 12;
         static const int sNumFds = 2;
-#else
-        static const int sNumInts = 12;
-        static const int sNumFds = 2;
-#endif
         static const int sMagic = 'gmsm';
 
         private_handle_t(int fd, int size, int flags, int bufferType,
@@ -203,16 +205,24 @@ struct private_handle_t : public native_handle {
             fd(fd),
 #ifdef QCOM_BSP
             fd_metadata(eFd),
+#else
+            genlockHandle(-1),
 #endif
-            magic(sMagic),  flags(flags), size(size), offset(0),
-            bufferType(bufferType), base(0),
+            magic(sMagic),
+            flags(flags), size(size), offset(0), bufferType(bufferType),
+            base(0),
 #ifdef QCOM_BSP
             offset_metadata(eOffset),
 #endif
             gpuaddr(0),
-            format(format), width(width), height(height)
+#ifndef QCOM_BSP
+            pid(getpid()),
+#endif
+            format(format), width(width), height(height),
 #ifdef QCOM_BSP
-            ,base_metadata(eBase)
+            base_metadata(eBase)
+#else
+            genlockPrivFd(-1)
 #endif
         {
             version = sizeof(native_handle);
