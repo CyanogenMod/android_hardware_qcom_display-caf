@@ -1,0 +1,8 @@
+Change-Id: Ib8bc36a38020b0e49678d51d556da2fe00f0bae6
+Code-Review+2: Steve Kondik <shade@chemlab.org>
+Verified+1: Steve Kondik <shade@chemlab.org>
+Submitted-by: Steve Kondik <shade@chemlab.org>
+Submitted-at: Sun, 24 Mar 2013 15:52:20 -0700
+Reviewed-on: http://review.cyanogenmod.org/33789
+Project: CyanogenMod/android_hardware_qcom_display-caf
+Branch: refs/heads/cm-10.1
