@@ -62,7 +62,7 @@ void IonAlloc::close_device()
     mIonFd = FD_INIT;
 }
 
-int IonAlloc::alloc_buffer(alloc_data& data)
+int IonAlloc::alloc_buffer(alloc_data& data, bool fallback)
 {
     Locker::Autolock _l(mLock);
     int err = 0;
@@ -111,7 +111,8 @@ int IonAlloc::alloc_buffer(alloc_data& data)
     if(ioctl(mIonFd, ION_IOC_ALLOC, &ionAllocData)) {
 #endif
         err = -errno;
-        ALOGE("ION_IOC_ALLOC failed with error - %s", strerror(errno));
+        ALOGE_IF( (!fallback), "ION_IOC_ALLOC failed with error - %s",
+                                                      strerror(errno));
 #ifdef OLD_ION_API
         if(ionSyncFd >= 0)
             close(ionSyncFd);

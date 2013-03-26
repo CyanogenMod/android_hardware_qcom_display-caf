@@ -263,7 +263,12 @@ int IonController::allocate(alloc_data& data, int usage)
     }
 
     data.flags = ionFlags;
-    ret = mIonAlloc->alloc_buffer(data);
+
+    if (canFallback(usage,(ionFlags & ION_SYSTEM_HEAP_ID))) {
+        ret = mIonAlloc->alloc_buffer(data, true);
+    } else {
+        ret = mIonAlloc->alloc_buffer(data);
+    }
 
     // Fallback
     if(ret < 0 && canFallback(usage,

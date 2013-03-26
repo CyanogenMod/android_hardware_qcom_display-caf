@@ -58,7 +58,7 @@ class IMemAlloc {
     // Allocate buffer - fill in the alloc_data
     // structure and pass it in. Mapped address
     // and fd are returned in the alloc_data struct
-    virtual int alloc_buffer(alloc_data& data) = 0;
+    virtual int alloc_buffer(alloc_data& data, bool fallback=false) = 0;
 
     // Free buffer
     virtual int free_buffer(void *base, size_t size,

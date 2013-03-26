@@ -39,7 +39,7 @@ namespace gralloc {
 class IonAlloc : public IMemAlloc  {
 
     public:
-    virtual int alloc_buffer(alloc_data& data);
+    virtual int alloc_buffer(alloc_data& data, bool fallback=false);
 
     virtual int free_buffer(void *base, size_t size,
                             int offset, int fd);
