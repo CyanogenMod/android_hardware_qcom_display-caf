@@ -311,16 +311,6 @@ int gralloc_unlock(gralloc_module_t const* module,
         err = memalloc->clean_buffer((void*)hnd->base,
                                      hnd->size, hnd->offset, hnd->fd,
                                      CACHE_CLEAN_AND_INVALIDATE);
-        ALOGE_IF(err < 0, "cannot flush handle %p (offs=%x len=%x, flags = 0x%x) err=%s\n",
-                 hnd, hnd->offset, hnd->size, hnd->flags, strerror(errno));
-#ifdef QCOM_BSP
-        unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-        err = memalloc->clean_buffer((void*)hnd->base_metadata, size,
-                hnd->offset_metadata, hnd->fd_metadata);
-        ALOGE_IF(err < 0, "cannot flush handle %p (offs=%x len=%lu, "
-                "flags = 0x%x) err=%s\n", hnd, hnd->offset_metadata, size,
-                hnd->flags, strerror(errno));
-#endif
         hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
     } else if(hnd->flags & private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH) {
         hnd->flags &= ~private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH;
