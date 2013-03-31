@@ -35,6 +35,7 @@
 
 int setMetaData(private_handle_t *handle, DispParamType paramType,
                                                     void *param) {
+#ifdef QCOM_BSP
     if (!handle) {
         ALOGE("%s: Private handle is null!", __func__);
         return -1;
@@ -72,5 +73,6 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
     if(munmap(base, size))
         ALOGE("%s: failed to unmap ptr 0x%x, err %d", __func__, (int)base,
                                                                         errno);
+#endif
     return 0;
 }

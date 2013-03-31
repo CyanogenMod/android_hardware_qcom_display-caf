@@ -13,7 +13,6 @@ LOCAL_SRC_FILES               := profiler.cpp mdp_version.cpp \
                                  comptype.cpp
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq ($(TARGET_USES_QCOM_BSP),true)
 include $(CLEAR_VARS)
 
 LOCAL_COPY_HEADERS_TO           := qcom/display
@@ -28,4 +27,3 @@ LOCAL_CFLAGS                    += -DLOG_TAG=\"DisplayMetaData\"
 LOCAL_MODULE_TAGS               := optional
 LOCAL_MODULE                    := libqdMetaData
 include $(BUILD_SHARED_LIBRARY)
-endif
