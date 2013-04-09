@@ -102,7 +102,7 @@ bool CopyBit::canUseCopybitForRGB(hwc_context_t *ctx,
         unsigned int renderArea = getRGBRenderingArea(list);
             ALOGD_IF (DEBUG_COPYBIT, "%s:renderArea %u, fbArea %u",
                                   __FUNCTION__, renderArea, fbArea);
-        if (renderArea < (mDynThreshold * fbArea)) {
+        if (renderArea <= (mDynThreshold * fbArea)) {
             return true;
         }
     } else if ((compositionType & qdutils::COMPOSITION_TYPE_MDP)) {
