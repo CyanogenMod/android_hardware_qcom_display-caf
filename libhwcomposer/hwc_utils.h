@@ -304,10 +304,6 @@ struct hwc_context_t {
     mutable Locker mExtSetLock;
     //Vsync
     struct vsync_state vstate;
-    //DMA used for rotator
-    bool mDMAInUse;
-    //MDP rotater needed
-    bool mNeedsRotator;
     //Check if base pipe is set up
     bool mBasePipeSetup;
 };
