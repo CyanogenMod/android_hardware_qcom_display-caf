@@ -306,6 +306,8 @@ struct hwc_context_t {
     struct vsync_state vstate;
     //Check if base pipe is set up
     bool mBasePipeSetup;
+    //Drawing round when we use GPU
+    bool isPaddingRound;
 };
 
 namespace qhwc {
