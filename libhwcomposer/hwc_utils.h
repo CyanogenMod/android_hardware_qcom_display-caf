@@ -322,8 +322,8 @@ struct hwc_context_t {
     bool mSecureMode;
     //Lock to prevent set from being called while blanking
     mutable Locker mBlankLock;
-    //Lock to protect set when detaching external disp
-    mutable Locker mExtSetLock;
+    //Lock to protect prepare & set when detaching external disp
+    mutable Locker mExtLock;
     //Vsync
     struct vsync_state vstate;
     //DMA used for rotator
