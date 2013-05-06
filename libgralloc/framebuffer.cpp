@@ -39,7 +39,7 @@
 #include <gralloc_priv.h>
 #include "fb_priv.h"
 #include "gr.h"
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
 #include <genlock.h>
 #endif
 #include <cutils/properties.h>

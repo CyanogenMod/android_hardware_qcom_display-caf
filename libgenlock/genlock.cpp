@@ -43,7 +43,7 @@ namespace {
     int get_kernel_lock_type(genlock_lock_type lockType)
     {
         int kLockType = 0;
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         // If the user sets both a read and write lock, higher preference is
         // given to the write lock.
         if (lockType & GENLOCK_WRITE_LOCK) {
@@ -64,7 +64,7 @@ namespace {
                                                    int lockType, int timeout,
                                                    int flags)
     {
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         if (private_handle_t::validate(buffer_handle)) {
             ALOGE("%s: handle is invalid", __FUNCTION__);
             return GENLOCK_FAILURE;
@@ -135,7 +135,7 @@ namespace {
 genlock_status_t genlock_create_lock(native_handle_t *buffer_handle)
 {
     genlock_status_t ret = GENLOCK_NO_ERROR;
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
     if (private_handle_t::validate(buffer_handle)) {
         ALOGE("%s: handle is invalid", __FUNCTION__);
         return GENLOCK_FAILURE;

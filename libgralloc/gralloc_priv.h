@@ -54,7 +54,7 @@ enum {
      * cannot be used with noncontiguous heaps */
     GRALLOC_USAGE_PRIVATE_UNCACHED        =       0x02000000,
 
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
     /* This flag can be set to disable genlock synchronization
      * for the gralloc buffer. If this flag is set the caller
      * is required to perform explicit synchronization.
@@ -175,10 +175,11 @@ struct private_handle_t : public native_handle {
 
         // file-descriptors
         int     fd;
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         // genlock handle to be dup'd by the binder
         int     genlockHandle;
-#else
+#endif
+#ifdef QCOM_BSP
         int     fd_metadata;          // fd for the meta-data
 #endif
         // ints
@@ -198,31 +199,38 @@ struct private_handle_t : public native_handle {
 #endif
         // The gpu address mapped into the mmu.
         int     gpuaddr;
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         int     pid;   // deprecated
 #endif
         int     format;
         int     width;
         int     height;
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         // local fd of the genlock device.
         int     genlockPrivFd;
-#else
+#endif
+#ifdef QCOM_BSP
         int     base_metadata;
 #endif
 
 #ifdef __cplusplus
+#ifdef QCOM_BSP_WITH_GENLOCK
+        static const int sNumInts = 14;
+        static const int sNumFds = 3;
+#else
         static const int sNumInts = 12;
         static const int sNumFds = 2;
+#endif
         static const int sMagic = 'gmsm';
 
         private_handle_t(int fd, int size, int flags, int bufferType,
                          int format,int width, int height, int eFd = -1,
                          int eOffset = 0, int eBase = 0) :
             fd(fd),
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
             genlockHandle(-1),
-#else
+#endif
+#ifdef QCOM_BSP
             fd_metadata(eFd),
 #endif
             magic(sMagic),  flags(flags),
@@ -238,14 +246,15 @@ struct private_handle_t : public native_handle {
             offset_metadata(eOffset),
 #endif
             gpuaddr(0),
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
             pid(getpid()),
 #endif
-            format(format), width(width), height(height),
-#ifndef QCOM_BSP
-            genlockPrivFd(-1)
-#else
-            base_metadata(eBase)
+            format(format), width(width), height(height)
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
+            ,genlockPrivFd(-1)
+#endif
+#ifdef QCOM_BSP
+            ,base_metadata(eBase)
 #endif
         {
             version = sizeof(native_handle);

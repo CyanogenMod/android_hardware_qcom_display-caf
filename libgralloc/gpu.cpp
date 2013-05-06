@@ -21,7 +21,7 @@
 #include <cutils/properties.h>
 #include <sys/mman.h>
 
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
 #include <genlock.h>
 #endif
 
@@ -98,7 +98,7 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
                                           strerror(-eDataErr));
 #endif
 
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
         if (usage & GRALLOC_USAGE_PRIVATE_UNSYNCHRONIZED) {
             flags |= private_handle_t::PRIV_FLAGS_UNSYNCHRONIZED;
         }
@@ -209,7 +209,7 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
         return err;
     }
 
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
     // Create a genlock lock for this buffer handle.
     err = genlock_create_lock((native_handle_t*)(*pHandle));
     if (err) {
@@ -242,7 +242,7 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
         return err;
 #endif
 
-#ifndef QCOM_BSP
+#if !defined(QCOM_BSP) || defined(QCOM_BSP_WITH_GENLOCK)
     // Release the genlock
     err = genlock_release_lock((native_handle_t*)hnd);
     if (err) {
