@@ -52,9 +52,17 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     struct fb_var_screeninfo info;
 
     int fb_fd = openFb(HWC_DISPLAY_PRIMARY);
-
-    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &info) == -1)
+    if(fb_fd < 0) {
+        ALOGE("%s: Error Opening FB : %s", __FUNCTION__, strerror(errno));
         return -errno;
+    }
+
+    if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &info) == -1) {
+        ALOGE("%s:Error in ioctl FBIOGET_VSCREENINFO: %s", __FUNCTION__,
+                                                       strerror(errno));
+        close(fb_fd);
+        return -errno;
+    }
 
     if (int(info.width) <= 0 || int(info.height) <= 0) {
         // the driver doesn't return that information
@@ -72,7 +80,9 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     metadata.op = metadata_op_frame_rate;
 
     if (ioctl(fb_fd, MSMFB_METADATA_GET, &metadata) == -1) {
-        ALOGE("Error retrieving panel frame rate");
+        ALOGE("%s:Error retrieving panel frame rate: %s", __FUNCTION__,
+                                                      strerror(errno));
+        close(fb_fd);
         return -errno;
     }
 
@@ -83,11 +93,12 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     float fps  = info.reserved[3] & 0xFF;
 #endif
 
-    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &finfo) == -1)
+    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &finfo) == -1) {
+        ALOGE("%s:Error in ioctl FBIOGET_FSCREENINFO: %s", __FUNCTION__,
+                                                       strerror(errno));
+        close(fb_fd);
         return -errno;
-
-    if (finfo.smem_len <= 0)
-        return -errno;
+    }
 
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].fd = fb_fd;
     //xres, yres may not be 32 aligned
@@ -321,6 +332,7 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].needsAlphaScale = false;
     ctx->listStats[dpy].preMultipliedAlpha = false;
     ctx->listStats[dpy].yuvCount = 0;
+    char property[PROPERTY_VALUE_MAX];
 
     for (size_t i = 0; i < list->numHwLayers; i++) {
         hwc_layer_1_t const* layer = &list->hwLayers[i];
@@ -347,6 +359,19 @@ void setListStats(hwc_context_t *ctx,
 
         if(!ctx->listStats[dpy].needsAlphaScale)
             ctx->listStats[dpy].needsAlphaScale = isAlphaScaled(layer);
+    }
+    if(ctx->listStats[dpy].yuvCount > 0) {
+        if (property_get("hw.cabl.yuv", property, NULL) > 0) {
+            if (atoi(property) != 1) {
+                property_set("hw.cabl.yuv", "1");
+            }
+        }
+    } else {
+        if (property_get("hw.cabl.yuv", property, NULL) > 0) {
+            if (atoi(property) != 0) {
+                property_set("hw.cabl.yuv", "0");
+            }
+        }
     }
 }
 
@@ -667,9 +692,15 @@ void setMdpFlags(hwc_layer_1_t *layer,
     }
 }
 
-static inline int configRotator(Rotator *rot, const Whf& whf,
+static inline int configRotator(Rotator *rot, Whf& whf,
         const eMdpFlags& mdpFlags, const eTransform& orient,
         const int& downscale) {
+    // Fix alignments for TILED format
+    if(whf.format == MDP_Y_CRCB_H2V2_TILE ||
+                            whf.format == MDP_Y_CBCR_H2V2_TILE) {
+        whf.w =  utils::alignup(whf.w, 64);
+        whf.h = utils::alignup(whf.h, 32);
+    }
     rot->setSource(whf);
     rot->setFlags(mdpFlags);
     rot->setTransform(orient);
