@@ -34,11 +34,15 @@ include $(BUILD_SHARED_LIBRARY)
 # MemAlloc Library
 include $(CLEAR_VARS)
 
+ifneq ($(TARGET_HAS_OLD_QCOM_ION),)
+libmemalloc-def := -DOLD_ION_API
+endif
+
 LOCAL_MODULE                  := libmemalloc
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdutils libdl
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdmemalloc\"
+LOCAL_CFLAGS                  := $(common_flags) $(libmemalloc-def) -DLOG_TAG=\"qdmemalloc\"
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := ionalloc.cpp alloc_controller.cpp
 
