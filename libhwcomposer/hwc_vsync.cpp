@@ -106,7 +106,7 @@ static void *vsync_loop(void *param)
                 if(ctx->vstate.enable == true) {
                     nsecs_t time_taken = systemTime()-vsync_start_time;
                     nsecs_t  threshold = ctx->dpyAttr[dpy].vsync_period*2;
-                    ALOGW_IF(time_taken > threshold,
+                    ALOGV_IF(time_taken > threshold,
                                             "Excessive delay reading vsync: took %lld ms",
                                             ns2ms(time_taken));
                 }
