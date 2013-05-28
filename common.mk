@@ -7,19 +7,10 @@ common_includes += hardware/qcom/display-caf/libhwcomposer
 common_includes += hardware/qcom/display-caf/libexternal
 common_includes += hardware/qcom/display-caf/libqservice
 
-ifeq ($(TARGET_USES_POST_PROCESSING),true)
-    common_flags     += -DUSES_POST_PROCESSING
-    common_includes += $(TARGET_OUT_HEADERS)/pp/inc
-endif
-
 common_header_export_path := qcom/display
 
 #Common libraries external to display-caf HAL
 common_libs := liblog libutils libcutils libhardware
-
-ifeq ($(TARGET_USES_POST_PROCESSING),true)
-    common_libs += libmm-abl
-endif
 
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
