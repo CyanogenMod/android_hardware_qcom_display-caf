@@ -75,7 +75,7 @@ typedef enum {
     PP_PARAM_VID_INTFC  = 0x0008,
     PP_PARAM_IGC        = 0x0010,
     PP_PARAM_SHARP2     = 0x0020,
-    UPDATE_BUFFER_GEOMETRY = 0x0080,
+    UPDATE_BUFFER_GEOMETRY = 0x0040,
 } DispParamType;
 
 int setMetaData(private_handle_t *handle, DispParamType paramType, void *param);
