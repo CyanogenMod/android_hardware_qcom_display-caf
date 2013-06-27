@@ -421,6 +421,15 @@ static void configurePPD(hwc_context_t *ctx, int yuvCount) {
     if (!ctx->mCablProp.enabled)
         return;
 
+    // No PPD for external
+    if (ctx->mExtDisplay->isExternalConnected()) {
+        if (ctx->mCablProp.start) {
+            ppdComm("cabl:off", ctx);
+            ctx->mCablProp.start = false;
+        }
+        return;
+    }
+
     if (yuvCount > 0 && !ctx->mCablProp.start) {
         ctx->mCablProp.start = true;
         if(ctx->mCablProp.videoOnly)
@@ -484,7 +493,6 @@ void setListStats(hwc_context_t *ctx,
         }
     }
 
-    setYUVProp(ctx, ctx->listStats[dpy].yuvCount);
     /*
      * Uncomment the below code for testing purposes
     if(dpy) {
