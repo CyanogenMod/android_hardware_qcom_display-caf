@@ -212,7 +212,8 @@ int IonController::allocate(alloc_data& data, int usage)
         ALOGW("GRALLOC_USAGE_PRIVATE_MM_HEAP \
                                 cannot be used as an insecure heap!\
                                 trying to use IOMMU instead !!");
-        ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
+        //ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
+        ionFlags |= ION_HEAP(ION_CP_MM_HEAP_ID);
     }
 
     if(usage & GRALLOC_USAGE_PRIVATE_CAMERA_HEAP)
