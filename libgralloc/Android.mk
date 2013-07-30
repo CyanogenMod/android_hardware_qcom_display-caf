@@ -42,4 +42,9 @@ LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdmemalloc\"
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := ionalloc.cpp alloc_controller.cpp
 
+#ifeq ($(BOARD_CAMERA_USE_MM_HEAP), true)
+    common_flags += -DCAMERA_USE_MM_HEAP
+#endif
+
+
 include $(BUILD_SHARED_LIBRARY)
