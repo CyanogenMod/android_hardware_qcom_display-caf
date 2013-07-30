@@ -34,6 +34,10 @@ include $(BUILD_SHARED_LIBRARY)
 # MemAlloc Library
 include $(CLEAR_VARS)
 
+ifeq ($(BOARD_CAMERA_USE_MM_HEAP),true)
+    common_flags += -DCAMERA_USE_MM_HEAP
+endif
+
 LOCAL_MODULE                  := libmemalloc
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
