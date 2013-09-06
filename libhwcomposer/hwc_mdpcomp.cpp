@@ -20,6 +20,7 @@
 #include "hwc_mdpcomp.h"
 #include <sys/ioctl.h>
 #include "external.h"
+#include "virtual.h"
 #include "qdMetaData.h"
 #include "mdp_version.h"
 #include "hwc_fbupdate.h"
@@ -52,9 +53,9 @@ MDPComp::MDPComp(int dpy):mDpy(dpy){};
 
 void MDPComp::dump(android::String8& buf)
 {
-    Locker::Autolock _l(mMdpCompLock);
     dumpsys_log(buf,"HWC Map for Dpy: %s \n",
-                mDpy ? "\"EXTERNAL\"" : "\"PRIMARY\"");
+                (mDpy == 0) ? "\"PRIMARY\"" :
+                (mDpy == 1) ? "\"EXTERNAL\"" : "\"VIRTUAL\"");
     dumpsys_log(buf,"PREV_FRAME: layerCount:%2d    mdpCount:%2d \
                 cacheCount:%2d \n", mCachedFrame.layerCount,
                 mCachedFrame.mdpCount, mCachedFrame.cacheCount);
@@ -360,7 +361,8 @@ bool MDPComp::isFrameDoable(hwc_context_t *ctx) {
     if(!isEnabled()) {
         ALOGD_IF(isDebug(),"%s: MDP Comp. not enabled.", __FUNCTION__);
         ret = false;
-    } else if(ctx->mExtDispConfiguring) {
+    } else if(ctx->dpyAttr[HWC_DISPLAY_EXTERNAL].isConfiguring ||
+              ctx->dpyAttr[HWC_DISPLAY_VIRTUAL].isConfiguring) {
         ALOGD_IF( isDebug(),"%s: External Display connection is pending",
                   __FUNCTION__);
         ret = false;
@@ -401,7 +403,8 @@ bool MDPComp::isFullFrameDoable(hwc_context_t *ctx,
     }
 
     if(ctx->listStats[mDpy].needsAlphaScale
-       && ctx->mMDP.version < qdutils::MDSS_V5) {
+       && (ctx->mMDP.version < qdutils::MDSS_V5)
+       && (ctx->listStats[mDpy].numAppLayers >2)){
         ALOGD_IF(isDebug(), "%s: frame needs alpha downscaling",__FUNCTION__);
         return false;
     }
@@ -542,9 +545,10 @@ bool MDPComp::isOnlyVideoDoable(hwc_context_t *ctx,
 
 /* Checks for conditions where YUV layers cannot be bypassed */
 bool MDPComp::isYUVDoable(hwc_context_t* ctx, hwc_layer_1_t* layer) {
+    bool extAnimBlockFeature = mDpy && ctx->listStats[mDpy].isDisplayAnimating;
 
-    if(isSkipLayer(layer)) {
-        ALOGE("%s: Unable to bypass skipped YUV", __FUNCTION__);
+    if(isSkipLayer(layer) && !extAnimBlockFeature) {
+        ALOGD_IF(isDebug(), "%s: Video marked SKIP dpy %d", __FUNCTION__, mDpy);
         return false;
     }
 
@@ -555,7 +559,7 @@ bool MDPComp::isYUVDoable(hwc_context_t* ctx, hwc_layer_1_t* layer) {
     }
 
     if(ctx->mNeedsRotator && ctx->mDMAInUse) {
-        ALOGE("%s: No DMA for Rotator",__FUNCTION__);
+        ALOGD_IF(isDebug(), "%s: No DMA for Rotator", __FUNCTION__);
         return false;
     }
 
@@ -665,6 +669,15 @@ int MDPComp::getAvailablePipes(hwc_context_t* ctx) {
 void MDPComp::updateYUV(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
 
     int nYuvCount = ctx->listStats[mDpy].yuvCount;
+    if(!nYuvCount && mDpy) {
+        //Reset "No animation on external display" related  parameters.
+        ctx->mPrevCropVideo.left = ctx->mPrevCropVideo.top =
+            ctx->mPrevCropVideo.right = ctx->mPrevCropVideo.bottom = 0;
+        ctx->mPrevDestVideo.left = ctx->mPrevDestVideo.top =
+            ctx->mPrevDestVideo.right = ctx->mPrevDestVideo.bottom = 0;
+        ctx->mPrevTransformVideo = 0;
+        return;
+     }
     for(int index = 0;index < nYuvCount; index++){
         int nYuvIndex = ctx->listStats[mDpy].yuvIndices[index];
         hwc_layer_1_t* layer = &list->hwLayers[nYuvIndex];
@@ -747,45 +760,36 @@ bool MDPComp::programYUV(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
 
 int MDPComp::prepare(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
 
-    { //LOCK SCOPE BEGIN
-        Locker::Autolock _l(mMdpCompLock);
+    const int numLayers = ctx->listStats[mDpy].numAppLayers;
 
-        const int numLayers = ctx->listStats[mDpy].numAppLayers;
+    //reset old data
+    mCurrentFrame.reset(numLayers);
 
-        //reset old data
-        mCurrentFrame.reset(numLayers);
+    //number of app layers exceeds MAX_NUM_APP_LAYERS fall back to GPU
+    //do not cache the information for next draw cycle.
+    if(numLayers > MAX_NUM_APP_LAYERS) {
+        mCachedFrame.updateCounts(mCurrentFrame);
+        ALOGD_IF(isDebug(), "%s: Number of App layers exceeded the limit ",
+                __FUNCTION__);
+        return -1;
+    }
 
-        //number of app layers exceeds MAX_NUM_APP_LAYERS fall back to GPU
-        //do not cache the information for next draw cycle.
-        if(numLayers > MAX_NUM_APP_LAYERS) {
-            mCachedFrame.updateCounts(mCurrentFrame);
-            ALOGD_IF(isDebug(), "%s: Number of App layers exceeded the limit ",
-                                    __FUNCTION__);
-            return -1;
-        }
+    //Hard conditions, if not met, cannot do MDP comp
+    if(!isFrameDoable(ctx)) {
+        ALOGD_IF( isDebug(),"%s: MDP Comp not possible for this frame",
+                __FUNCTION__);
+        reset(numLayers, list);
+        return -1;
+    }
 
-        //Hard conditions, if not met, cannot do MDP comp
-        if(!isFrameDoable(ctx)) {
-            ALOGD_IF( isDebug(),"%s: MDP Comp not possible for this frame",
-                                    __FUNCTION__);
-            reset(numLayers, list);
-            return -1;
-        }
-
-        //Check whether layers marked for MDP Composition is actually doable.
-        if(isFullFrameDoable(ctx, list)){
-            mCurrentFrame.map();
-            //Configure framebuffer first if applicable
-            if(mCurrentFrame.fbZ >= 0) {
-                if(!ctx->mFBUpdate[mDpy]->prepare(ctx, list,
+    //Check whether layers marked for MDP Composition is actually doable.
+    if(isFullFrameDoable(ctx, list)) {
+        mCurrentFrame.map();
+        //Configure framebuffer first if applicable
+        if(mCurrentFrame.fbZ >= 0) {
+            if(!ctx->mFBUpdate[mDpy]->prepare(ctx, list,
                         mCurrentFrame.fbZ)) {
-                    ALOGE("%s configure framebuffer failed", __func__);
-                    reset(numLayers, list);
-                    return -1;
-                }
-            }
-            //Acquire and Program MDP pipes
-            if(!programMDP(ctx, list)) {
+                ALOGE("%s configure framebuffer failed", __func__);
                 reset(numLayers, list);
                 return -1;
             } else { //Success
@@ -802,39 +806,57 @@ int MDPComp::prepare(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
                     mCurrentFrame.needsRedraw = true;
                 }
             }
-        } else if(isOnlyVideoDoable(ctx, list)) {
-            //All layers marked for MDP comp cannot be bypassed.
-            //Try to compose atleast YUV layers through MDP comp and let
-            //all the RGB layers compose in FB
-            //Destination over
-            mCurrentFrame.fbZ = -1;
-            if(mCurrentFrame.fbCount)
-                mCurrentFrame.fbZ = mCurrentFrame.mdpCount;
-
-            mCurrentFrame.map();
-
-            //Configure framebuffer first if applicable
-            if(mCurrentFrame.fbZ >= 0) {
-                if(!ctx->mFBUpdate[mDpy]->prepare(ctx, list, mCurrentFrame.fbZ)) {
-                    ALOGE("%s configure framebuffer failed", __func__);
-                    reset(numLayers, list);
-                    return -1;
-                }
+        }
+        //Acquire and Program MDP pipes
+        if(!programMDP(ctx, list)) {
+            reset(numLayers, list);
+            return -1;
+        } else { //Success
+            //Any change in composition types needs an FB refresh
+            mCurrentFrame.needsRedraw = false;
+            if(mCurrentFrame.fbCount &&
+                    ((mCurrentFrame.mdpCount != mCachedFrame.mdpCount) ||
+                     (mCurrentFrame.fbCount != mCachedFrame.cacheCount) ||
+                     (mCurrentFrame.fbZ != mCachedFrame.fbZ) ||
+                     (!mCurrentFrame.mdpCount) ||
+                     (list->flags & HWC_GEOMETRY_CHANGED) ||
+                     isSkipPresent(ctx, mDpy) ||
+                     (mDpy > HWC_DISPLAY_PRIMARY))) {
+                mCurrentFrame.needsRedraw = true;
             }
-            if(!programYUV(ctx, list)) {
+        }
+    } else if(isOnlyVideoDoable(ctx, list)) {
+        //All layers marked for MDP comp cannot be bypassed.
+        //Try to compose atleast YUV layers through MDP comp and let
+        //all the RGB layers compose in FB
+        //Destination over
+        mCurrentFrame.fbZ = -1;
+        if(mCurrentFrame.fbCount)
+            mCurrentFrame.fbZ = mCurrentFrame.mdpCount;
+
+        mCurrentFrame.map();
+
+        //Configure framebuffer first if applicable
+        if(mCurrentFrame.fbZ >= 0) {
+            if(!ctx->mFBUpdate[mDpy]->prepare(ctx, list, mCurrentFrame.fbZ)) {
+                ALOGE("%s configure framebuffer failed", __func__);
                 reset(numLayers, list);
                 return -1;
             }
-        } else {
+        }
+        if(!programYUV(ctx, list)) {
             reset(numLayers, list);
             return -1;
         }
+    } else {
+        reset(numLayers, list);
+        return -1;
+    }
 
-        //UpdateLayerFlags
-        setMDPCompLayerFlags(ctx, list);
-        mCachedFrame.updateCounts(mCurrentFrame);
+    //UpdateLayerFlags
+    setMDPCompLayerFlags(ctx, list);
+    mCachedFrame.updateCounts(mCurrentFrame);
 
-    } //LOCK SCOPE END. dump also need this lock.
     // unlock it before calling dump function to avoid deadlock
 
     if(isDebug()) {
@@ -949,8 +971,6 @@ bool MDPCompLowRes::draw(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
         ALOGD_IF(isDebug(),"%s: Exceeding max layer count", __FUNCTION__);
         return true;
     }
-
-    Locker::Autolock _l(mMdpCompLock);
 
     /* reset Invalidator */
     if(idleInvalidator && !sIdleFallBack && mCurrentFrame.mdpCount)
@@ -1146,8 +1166,6 @@ bool MDPCompHighRes::draw(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
         ALOGD_IF(isDebug(),"%s: Exceeding max layer count", __FUNCTION__);
         return true;
     }
-
-    Locker::Autolock _l(mMdpCompLock);
 
     /* reset Invalidator */
     if(idleInvalidator && !sIdleFallBack && mCurrentFrame.mdpCount)

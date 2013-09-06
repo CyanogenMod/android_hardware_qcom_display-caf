@@ -6,6 +6,7 @@ common_includes += hardware/qcom/display-caf/libqdutils
 common_includes += hardware/qcom/display-caf/libhwcomposer
 common_includes += hardware/qcom/display-caf/libexternal
 common_includes += hardware/qcom/display-caf/libqservice
+common_includes += hardware/qcom/display-caf/libvirtual
 
 common_header_export_path := qcom/display
 
