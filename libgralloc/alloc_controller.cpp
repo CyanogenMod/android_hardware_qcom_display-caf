@@ -192,9 +192,7 @@ int IonController::allocate(alloc_data& data, int usage)
 {
     int ionFlags = 0;
     int ret;
-#ifndef SECURE_MM_HEAP
-    bool noncontig = false;
-#endif
+    bool nonContig = false;
 
     data.uncached = useUncached(usage);
     data.allocType = 0;
@@ -204,17 +202,13 @@ int IonController::allocate(alloc_data& data, int usage)
 
     if(usage & GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP) {
         ionFlags |= ION_HEAP(ION_SYSTEM_HEAP_ID);
-#ifndef SECURE_MM_HEAP
-        noncontig = true;
-#endif
+        nonContig = true;
     }
 
 #ifndef NO_IOMMU
     if(usage & GRALLOC_USAGE_PRIVATE_IOMMU_HEAP) {
         ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
-#ifndef SECURE_MM_HEAP
-        noncontig = true;
-#endif
+        nonContig = true;
     }
 #endif
 
@@ -253,7 +247,7 @@ int IonController::allocate(alloc_data& data, int usage)
     if(ionFlags & ION_SECURE)
         data.allocType |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
 #else
-    if (usage & GRALLOC_USAGE_PROTECTED && !noncontig)
+    if (usage & GRALLOC_USAGE_PROTECTED && !nonContig)
         data.allocType |= ION_SECURE;
 #endif
 
@@ -277,20 +271,16 @@ int IonController::allocate(alloc_data& data, int usage)
     {
         ALOGW("Falling back to system heap");
         data.flags = ION_HEAP(ION_SYSTEM_HEAP_ID);
-#ifndef SECURE_MM_HEAP
-        noncontig = true;
-#endif
+        nonContig = true;
         ret = mIonAlloc->alloc_buffer(data);
     }
 
     if(ret >= 0 ) {
         data.allocType |= private_handle_t::PRIV_FLAGS_USES_ION;
-#ifndef SECURE_MM_HEAP
-        if (noncontig)
+        if (nonContig)
             data.allocType |= private_handle_t::PRIV_FLAGS_NONCONTIGUOUS_MEM;
         if(ionFlags & ION_SECURE)
             data.allocType |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
-#endif
     }
 
     return ret;
