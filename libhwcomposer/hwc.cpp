@@ -150,11 +150,12 @@ static int hwc_prepare_primary(hwc_composer_device_1 *dev,
                 const int fbZ = 0;
                 ctx->mFBUpdate[dpy]->prepare(ctx, list, fbZ);
 
+#ifdef USE_COPYBIT_COMPOSITION
                 // Use Copybit, when MDP comp fails
                 // (only for 8960 which has  dedicated 2D core)
-                if( (ctx->mMDP.version == qdutils::MDP_V4_1) &&
-                                             ctx->mCopyBit[dpy])
+                if (ctx->mCopyBit[dpy])
                     ctx->mCopyBit[dpy]->prepare(ctx, list, dpy);
+#endif
             }
         }
     }
