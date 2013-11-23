@@ -35,7 +35,7 @@
 
 int setMetaData(private_handle_t *handle, DispParamType paramType,
                                                     void *param) {
-#ifdef QCOM_BSP
+#if defined(QCOM_BSP) || defined(NEEDS_QDMETADATA)
     if (!handle) {
         ALOGE("%s: Private handle is null!", __func__);
         return -1;

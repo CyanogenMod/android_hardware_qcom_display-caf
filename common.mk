@@ -44,3 +44,8 @@ endif
 ifneq ($(TARGET_DISPLAY_INSECURE_MM_HEAP),true)
     common_flags += -DSECURE_MM_HEAP
 endif
+
+
+ifeq ($(TARGET_DISPLAY_NEEDS_QDMETADATA),true)
+    common_flags += -DNEEDS_QDMETADATA
+endif
