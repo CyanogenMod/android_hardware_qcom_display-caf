@@ -89,6 +89,8 @@ struct DisplayAttributes {
     bool isConfiguring;
     // External Display is in MDP Downscale mode indicator
     bool mDownScaleMode;
+    // Ext dst Rect
+    hwc_rect_t mDstRect;
 };
 
 struct ListStats {
