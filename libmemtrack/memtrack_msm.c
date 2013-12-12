@@ -27,7 +27,7 @@ int msm_memtrack_init(const struct memtrack_module *module)
 
 int msm_memtrack_get_memory(const struct memtrack_module *module,
                                 pid_t pid,
-                                int type,
+                                enum memtrack_type type,
                                 struct memtrack_record *records,
                                 size_t *num_records)
 {

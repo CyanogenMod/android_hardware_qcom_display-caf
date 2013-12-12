@@ -49,7 +49,7 @@ enum {
 static void setup(hwc_context_t* ctx, int dpy)
 {
     ctx->mFBUpdate[dpy] =
-        IFBUpdate::getObject(ctx->dpyAttr[dpy].xres, dpy);
+        IFBUpdate::getObject(ctx, ctx->dpyAttr[dpy].xres, dpy);
     ctx->mMDPComp[dpy] =
         MDPComp::getObject(ctx->dpyAttr[dpy].xres, dpy);
     int compositionType =
@@ -57,7 +57,7 @@ static void setup(hwc_context_t* ctx, int dpy)
     if (compositionType & (qdutils::COMPOSITION_TYPE_DYN |
                            qdutils::COMPOSITION_TYPE_MDP |
                            qdutils::COMPOSITION_TYPE_C2D)) {
-        ctx->mCopyBit[dpy] = new CopyBit();
+        ctx->mCopyBit[dpy] = new CopyBit(ctx, dpy);
     }
 }
 
@@ -290,7 +290,15 @@ static void handle_uevent(hwc_context_t* ctx, const char* udata, int len)
         }
         case EXTERNAL_PAUSE:
             {   // pause case
-                ALOGD("%s Received Pause event",__FUNCTION__);
+
+                 ALOGD("%s Received Pause event",__FUNCTION__);
+                 /* Display already in pause */
+                 if(ctx->dpyAttr[dpy].isPause) {
+                    ALOGE_IF(UEVENT_DEBUG,"%s: Ignoring EXTERNAL_PAUSE event"
+                             "for display: %d", __FUNCTION__, dpy);
+                    break;
+                 }
+
                  {
                      Locker::Autolock _l(ctx->mDrawLock);
                      ctx->dpyAttr[dpy].isActive = true;
@@ -313,7 +321,16 @@ static void handle_uevent(hwc_context_t* ctx, const char* udata, int len)
             }
         case EXTERNAL_RESUME:
             {  // resume case
+
                 ALOGD("%s Received resume event",__FUNCTION__);
+
+                /* Display already is resumed */
+                if(not ctx->dpyAttr[dpy].isPause) {
+                    ALOGE_IF(UEVENT_DEBUG,"%s: Ignoring EXTERNAL_RESUME event"
+                             "for display: %d", __FUNCTION__, dpy);
+                    break;
+                }
+
                 //Treat Resume as Online event
                 //Since external didnt have any pipes, force primary to give up
                 //its pipes; we don't allow inter-mixer pipe transfers.

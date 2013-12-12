@@ -47,7 +47,7 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
     size_t allocated_records = min(*num_records, ARRAY_SIZE(record_templates));
     int i;
     FILE *fp;
-    FILE *smaps_fp = NULL;
+    FILE *smaps_fp;
     char line[1024];
     char tmp[128];
     size_t accounted_size = 0;
@@ -64,17 +64,16 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
     memcpy(records, record_templates,
            sizeof(struct memtrack_record) * allocated_records);
 
-    sprintf(tmp, "/d/kgsl/proc/%d/mem", pid);
+    snprintf(tmp, sizeof(tmp), "/d/kgsl/proc/%d/mem", pid);
     fp = fopen(tmp, "r");
     if (fp == NULL) {
         return -errno;
     }
 
     if (type == MEMTRACK_TYPE_GL) {
-        sprintf(tmp, "/proc/%d/smaps", pid);
+        snprintf(tmp, sizeof(tmp), "/proc/%d/smaps", pid);
         smaps_fp = fopen(tmp, "r");
         if (smaps_fp == NULL) {
-            fclose(fp);
             return -errno;
         }
     }
@@ -146,8 +145,6 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
         records[1].size_in_bytes = unaccounted_size;
     }
 
-    if (smaps_fp)
-        fclose(smaps_fp);
     fclose(fp);
 
     return 0;
