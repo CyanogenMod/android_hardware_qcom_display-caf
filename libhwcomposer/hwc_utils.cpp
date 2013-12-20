@@ -108,6 +108,17 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].ydpi = ydpi;
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].vsync_period = 1000000000l / fps;
 
+    //Blank and unblank primary on first boot
+    if(ioctl(fb_fd, FBIOBLANK, FB_BLANK_POWERDOWN) < 0) {
+        ALOGE("%s: Failed to blank display", __FUNCTION__);
+        return -errno;
+    }
+    if(ioctl(fb_fd, FBIOBLANK, FB_BLANK_UNBLANK) < 0) {
+        ALOGE("%s: Failed to unblank display", __FUNCTION__);
+        return -errno;
+    }
+    ctx->dpyAttr[HWC_DISPLAY_PRIMARY].isActive = true;
+
     return 0;
 }
 
