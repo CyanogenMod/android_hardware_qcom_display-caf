@@ -24,4 +24,8 @@ LOCAL_SRC_FILES               := hwc.cpp          \
                                  hwc_qclient.cpp  \
                                  hwc_dump_layers.cpp
 
+ifeq ($(TARGET_BOARD_PLATFORM),msm7x30)
+    LOCAL_CFLAGS              += -DBLANK_UNBLANK_ON_BOOT
+endif
+
 include $(BUILD_SHARED_LIBRARY)
