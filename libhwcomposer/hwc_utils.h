@@ -58,6 +58,7 @@ class IFBUpdate;
 class IVideoOverlay;
 class MDPComp;
 class CopyBit;
+class HwcDebug;
 
 
 struct MDPInfo {
@@ -86,6 +87,8 @@ struct DisplayAttributes {
     bool isConfiguring;
     // External Display is in MDP Downscale mode indicator
     bool mDownScaleMode;
+    // Ext dst Rect
+    hwc_rect_t mDstRect;
 };
 
 struct ListStats {
@@ -126,7 +129,11 @@ public:
     LayerRotMap() { reset(); }
     enum { MAX_SESS = 3 };
     void add(hwc_layer_1_t* layer, overlay::Rotator *rot);
+    //Resets the mapping of layer to rotator
     void reset();
+    //Clears mappings and existing rotator fences
+    //Intended to be used during errors
+    void clear();
     uint32_t getCount() const;
     hwc_layer_1_t* getLayer(uint32_t index) const;
     overlay::Rotator* getRot(uint32_t index) const;
@@ -387,6 +394,8 @@ struct hwc_context_t {
     qhwc::ListStats listStats[HWC_NUM_DISPLAY_TYPES];
     qhwc::LayerProp *layerProp[HWC_NUM_DISPLAY_TYPES];
     qhwc::MDPComp *mMDPComp[HWC_NUM_DISPLAY_TYPES];
+    qhwc::HwcDebug *mHwcDebug[HWC_NUM_DISPLAY_TYPES];
+    hwc_rect_t mViewFrame[HWC_NUM_DISPLAY_TYPES];
 
     // No animation on External display feature
     // Notifies hwcomposer about the device orientation before animation.
@@ -416,7 +425,8 @@ struct hwc_context_t {
     bool mBufferMirrorMode;
 
     qhwc::LayerRotMap *mLayerRotMap[HWC_NUM_DISPLAY_TYPES];
-
+    //previous Width & Height
+    overlay::utils::Whf mPrevWHF[HWC_NUM_DISPLAY_TYPES];
     // Panel reset flag will be set if BTA check fails
     bool mPanelResetStatus;
 };

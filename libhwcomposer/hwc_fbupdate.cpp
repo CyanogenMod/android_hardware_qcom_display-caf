@@ -165,12 +165,16 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_display_contents_1 *list,
         }
         calcExtDisplayPosition(ctx, NULL, mDpy, sourceCrop, displayFrame,
                                    transform, orient);
+        //Store the displayFrame, will be used in getDisplayViewFrame
+        ctx->dpyAttr[mDpy].mDstRect = displayFrame;
         setMdpFlags(layer, mdpFlags, 0, transform);
         // For External use rotator if there is a rotation value set
         ret = preRotateExtDisplay(ctx, layer, info,
                 sourceCrop, mdpFlags, rotFlags);
         if(!ret) {
             ALOGE("%s: preRotate for external Failed!", __FUNCTION__);
+            ctx->mOverlay->clear(mDpy);
+            ctx->mLayerRotMap[mDpy]->clear();
             return false;
         }
         //For the mdp, since either we are pre-rotating or MDP does flips
@@ -191,6 +195,7 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_display_contents_1 *list,
         if(configMdp(ctx->mOverlay, parg, orient, sourceCrop, displayFrame,
                     NULL, mDest) < 0) {
             ALOGE("%s: configMdp failed for dpy %d", __FUNCTION__, mDpy);
+            ctx->mLayerRotMap[mDpy]->clear();
             ret = false;
         }
     }
@@ -354,6 +359,9 @@ bool FBUpdateHighRes::configure(hwc_context_t *ctx,
         if (!ov.commit(destR)) {
             ALOGE("%s: commit fails for right", __FUNCTION__);
             ret = false;
+        }
+        if(ret == false) {
+            ctx->mLayerRotMap[mDpy]->clear();
         }
     }
     return ret;

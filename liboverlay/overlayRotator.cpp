@@ -108,6 +108,14 @@ void RotMem::Mem::setReleaseFd(const int& fence) {
 }
 
 //============RotMgr=========================
+RotMgr * RotMgr::sRotMgr = NULL;
+
+RotMgr* RotMgr::getInstance() {
+    if(sRotMgr == NULL) {
+        sRotMgr = new RotMgr();
+    }
+    return sRotMgr;
+}
 
 RotMgr::RotMgr() {
     for(int i = 0; i < MAX_ROT_SESS; i++) {

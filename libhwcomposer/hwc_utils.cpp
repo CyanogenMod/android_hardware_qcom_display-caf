@@ -30,6 +30,7 @@
 #include "hwc_fbupdate.h"
 #include "mdp_version.h"
 #include "hwc_copybit.h"
+#include "hwc_dump_layers.h"
 #include "external.h"
 #include "virtual.h"
 #include "hwc_qclient.h"
@@ -122,7 +123,7 @@ void initContext(hwc_context_t *ctx)
     ctx->mMDP.panel = qdutils::MDPVersion::getInstance().getPanelType();
     overlay::Overlay::initOverlay();
     ctx->mOverlay = overlay::Overlay::getInstance();
-    ctx->mRotMgr = new RotMgr();
+    ctx->mRotMgr = RotMgr::getInstance();
 
     //Is created and destroyed only once for primary
     //For external it could get created and destroyed multiple times depending
@@ -163,6 +164,9 @@ void initContext(hwc_context_t *ctx)
         ctx->mLayerRotMap[i] = new LayerRotMap();
     }
 
+    for (uint32_t i = 0; i < HWC_NUM_DISPLAY_TYPES; i++) {
+        ctx->mHwcDebug[i] = new HwcDebug(i);
+    }
     MDPComp::init(ctx);
 
     ctx->vstate.enable = false;
@@ -233,6 +237,10 @@ void closeContext(hwc_context_t *ctx)
         if(ctx->mLayerRotMap[i]) {
             delete ctx->mLayerRotMap[i];
             ctx->mLayerRotMap[i] = NULL;
+        }
+        if(ctx->mHwcDebug[i]) {
+            delete ctx->mHwcDebug[i];
+            ctx->mHwcDebug[i] = NULL;
         }
     }
 
@@ -654,6 +662,7 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].extOnlyLayerIndex = -1;
     ctx->listStats[dpy].isDisplayAnimating = false;
     ctx->listStats[dpy].secureUI = false;
+    ctx->mViewFrame[dpy] = (hwc_rect_t){0, 0, 0, 0};
 
     optimizeLayerRects(ctx, list, dpy);
 
@@ -661,6 +670,9 @@ void setListStats(hwc_context_t *ctx,
         hwc_layer_1_t const* layer = &list->hwLayers[i];
         private_handle_t *hnd = (private_handle_t *)layer->handle;
 
+        // Calculate view frame of each display from the layer displayframe
+        ctx->mViewFrame[dpy] = getUnion(ctx->mViewFrame[dpy],
+                                        layer->displayFrame);
 #ifdef QCOM_BSP
         if (layer->flags & HWC_SCREENSHOT_ANIMATOR_LAYER) {
             ctx->listStats[dpy].isDisplayAnimating = true;
@@ -1372,6 +1384,7 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
     calcExtDisplayPosition(ctx, hnd, dpy, crop, dst,
                                            transform, orient);
 
+    bool forceRot = false;
     if(isYuvBuffer(hnd) && ctx->mMDP.version >= qdutils::MDP_V4_2 &&
        ctx->mMDP.version < qdutils::MDSS_V5) {
         downscale =  getDownscaleFactor(
@@ -1382,13 +1395,25 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
         if(downscale) {
             rotFlags = ROT_DOWNSCALE_ENABLED;
         }
+
+        uint32_t& prevWidth = ctx->mPrevWHF[dpy].w;
+        uint32_t& prevHeight = ctx->mPrevWHF[dpy].h;
+        if(prevWidth != (uint32_t)getWidth(hnd) ||
+                prevHeight != (uint32_t)getHeight(hnd)) {
+            uint32_t prevBufArea = prevWidth * prevHeight;
+            if(prevBufArea) {
+                forceRot = true;
+            }
+            prevWidth = (uint32_t)getWidth(hnd);
+            prevHeight = (uint32_t)getHeight(hnd);
+        }
     }
 
     setMdpFlags(layer, mdpFlags, downscale, transform);
     trimLayer(ctx, dpy, transform, crop, dst);
 
     if(isYuvBuffer(hnd) && //if 90 component or downscale, use rot
-            ((transform & HWC_TRANSFORM_ROT_90) || downscale)) {
+            ((transform & HWC_TRANSFORM_ROT_90) || downscale || forceRot)) {
         *rot = ctx->mRotMgr->getNext();
         if(*rot == NULL) return -1;
         Whf origWhf(hnd->width, hnd->height,
@@ -1396,7 +1421,6 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
         if(configRotator(*rot, whf, origWhf,  mdpFlags, orient, downscale) < 0) {
         //Configure rotator for pre-rotation
             ALOGE("%s: configRotator failed!", __FUNCTION__);
-            ctx->mOverlay->clear(dpy);
             return -1;
         }
         ctx->mLayerRotMap[dpy]->add(layer, *rot);
@@ -1415,7 +1439,6 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
 
     if(configMdp(ctx->mOverlay, parg, orient, crop, dst, metadata, dest) < 0) {
         ALOGE("%s: commit failed for low res panel", __FUNCTION__);
-        ctx->mLayerRotMap[dpy]->reset();
         return -1;
     }
     return 0;
@@ -1466,11 +1489,25 @@ int configureHighRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
         }
     }
 
+    bool forceRot = false;
+    if(isYuvBuffer(hnd)) {
+        uint32_t& prevWidth = ctx->mPrevWHF[dpy].w;
+        uint32_t& prevHeight = ctx->mPrevWHF[dpy].h;
+        if(prevWidth != (uint32_t)getWidth(hnd) ||
+                prevHeight != (uint32_t)getHeight(hnd)) {
+            uint32_t prevBufArea = (prevWidth * prevHeight);
+            if(prevBufArea) {
+                forceRot = true;
+            }
+            prevWidth = (uint32_t)getWidth(hnd);
+            prevHeight = (uint32_t)getHeight(hnd);
+        }
+    }
 
     setMdpFlags(layer, mdpFlagsL, 0, transform);
     trimLayer(ctx, dpy, transform, crop, dst);
 
-    if(isYuvBuffer(hnd) && (transform & HWC_TRANSFORM_ROT_90)) {
+    if(isYuvBuffer(hnd) && ((transform & HWC_TRANSFORM_ROT_90) || forceRot)) {
         (*rot) = ctx->mRotMgr->getNext();
         if((*rot) == NULL) return -1;
         Whf origWhf(hnd->width, hnd->height,
@@ -1478,7 +1515,6 @@ int configureHighRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
         if(configRotator(*rot, whf, origWhf, mdpFlagsL, orient, downscale) < 0) {
         //Configure rotator for pre-rotation
             ALOGE("%s: configRotator failed!", __FUNCTION__);
-            ctx->mOverlay->clear(dpy);
             return -1;
         }
         ctx->mLayerRotMap[dpy]->add(layer, *rot);
@@ -1575,6 +1611,11 @@ void LayerRotMap::reset() {
         mRot[i] = 0;
     }
     mCount = 0;
+}
+
+void LayerRotMap::clear() {
+    RotMgr::getInstance()->markUnusedTop(mCount);
+    reset();
 }
 
 void LayerRotMap::setReleaseFd(const int& fence) {
