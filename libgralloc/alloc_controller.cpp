@@ -243,6 +243,9 @@ int IonController::allocate(alloc_data& data, int usage)
 #endif
     }
 
+    if(usage & GRALLOC_USAGE_PRIVATE_CAMERA_HEAP)
+        ionFlags |= ION_HEAP(ION_CAMERA_HEAP_ID);
+
     if(usage & GRALLOC_USAGE_PRIVATE_ADSP_HEAP)
         ionFlags |= ION_HEAP(ION_ADSP_HEAP_ID);
 
@@ -260,9 +263,7 @@ int IonController::allocate(alloc_data& data, int usage)
     // we run out.
     if(!ionFlags) {
         ionFlags = ION_HEAP(ION_SF_HEAP_ID);
-#ifdef NO_IOMMU
-        ionFlags |= ION_HEAP(ION_CP_MM_HEAP_ID);
-#else
+#ifndef NO_IOMMU
         ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
 #endif
     }
