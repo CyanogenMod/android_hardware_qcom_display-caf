@@ -250,7 +250,9 @@ void initContext(hwc_context_t *ctx)
 
     for (uint32_t i = 0; i < HWC_NUM_DISPLAY_TYPES; i++) {
         ctx->mHwcDebug[i] = new HwcDebug(i);
+        ctx->mPrevHwLayerCount[i] = 0;
     }
+
     MDPComp::init(ctx);
 
     ctx->vstate.enable = false;
