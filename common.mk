@@ -8,6 +8,11 @@ common_includes += hardware/qcom/display-caf/libexternal
 common_includes += hardware/qcom/display-caf/libqservice
 common_includes += hardware/qcom/display-caf/libvirtual
 
+ifeq ($(TARGET_USES_POST_PROCESSING),true)
+    common_flags     += -DUSES_POST_PROCESSING
+    common_includes  += $(TARGET_OUT_HEADERS)/pp/inc
+endif
+
 common_header_export_path := qcom/display
 
 #Common libraries external to display-caf HAL
