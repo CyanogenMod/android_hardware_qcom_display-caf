@@ -805,6 +805,11 @@ void setListStats(hwc_context_t *ctx,
         }
     }
 
+    if (ctx->listStats[dpy].yuvCount != 1) {
+        ctx->mPrevWHF[dpy].w = 0;
+        ctx->mPrevWHF[dpy].h = 0;
+    }
+
     if(dpy) {
         //uncomment the below code for testing purpose.
         /* char value[PROPERTY_VALUE_MAX];
@@ -1433,11 +1438,12 @@ inline void updateSource(eTransform& orient, Whf& whf,
 }
 
 bool needToForceRotator(hwc_context_t *ctx, const int& dpy,
-         uint32_t w, uint32_t h) {
+         uint32_t w, uint32_t h, int transform) {
     int nYuvCount = ctx->listStats[dpy].yuvCount;
     bool forceRot = false;
     //Force rotator for resolution change only if 1 yuv layer on primary
-    if(nYuvCount == 1) {
+    if(nYuvCount == 1 && (!((transform & HWC_TRANSFORM_FLIP_H) ||
+            (transform & HWC_TRANSFORM_FLIP_V)))) {
         uint32_t& prevWidth = ctx->mPrevWHF[dpy].w;
         uint32_t& prevHeight = ctx->mPrevWHF[dpy].h;
         if((prevWidth != w) || (prevHeight != h)) {
@@ -1510,7 +1516,8 @@ int configureLowRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
             rotFlags = ROT_DOWNSCALE_ENABLED;
         }
 
-        forceRot = needToForceRotator(ctx, dpy, (uint32_t)getWidth(hnd), (uint32_t)getHeight(hnd));
+        forceRot = needToForceRotator(ctx, dpy, (uint32_t)getWidth(hnd),
+                (uint32_t)getHeight(hnd), transform);
     }
 
     setMdpFlags(layer, mdpFlags, downscale, transform);
@@ -1595,7 +1602,8 @@ int configureHighRes(hwc_context_t *ctx, hwc_layer_1_t *layer,
 
     bool forceRot = false;
     if(isYuvBuffer(hnd)) {
-        forceRot = needToForceRotator(ctx, dpy, (uint32_t)getWidth(hnd), (uint32_t)getHeight(hnd));
+        forceRot = needToForceRotator(ctx, dpy, (uint32_t)getWidth(hnd),
+                (uint32_t)getHeight(hnd), transform);
     }
 
     setMdpFlags(layer, mdpFlagsL, 0, transform);
