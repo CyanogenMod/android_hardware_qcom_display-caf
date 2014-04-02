@@ -45,7 +45,11 @@ public:
     //High res panels can be backed by 2 layer mixers and a single fb node.
     enum { DPY_PRIMARY, DPY_EXTERNAL, DPY_WRITEBACK, DPY_UNUSED };
     enum { DPY_MAX = DPY_UNUSED };
+#ifdef NO_WRITEBACK
+    enum { MAX_FB_DEVICES = DPY_WRITEBACK };
+#else
     enum { MAX_FB_DEVICES = DPY_MAX };
+#endif
 
     /* dtor close */
     ~Overlay();
