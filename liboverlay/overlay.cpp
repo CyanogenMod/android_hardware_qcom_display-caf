@@ -263,7 +263,9 @@ int Overlay::initOverlay() {
             fd = ::open(name, O_RDWR, 0);
             if(fd < 0) {
                 ALOGE("cannot open framebuffer(%d)", i);
-                return -1;
+		if (i < 2)
+		  return -1;
+		continue;
             }
             //Get the mixer configuration */
             req.mixer_num = i;
