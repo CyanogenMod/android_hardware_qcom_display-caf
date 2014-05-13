@@ -1,5 +1,7 @@
 ifeq ($(TARGET_QCOM_DISPLAY_VARIANT),caf)
 
+common_flags += -DQCOM_DISPLAY_CAF
+
 display-hals := libgralloc libgenlock libcopybit libvirtual
 display-hals += libhwcomposer liboverlay libqdutils libexternal libqservice
 display-hals += libmemtrack
